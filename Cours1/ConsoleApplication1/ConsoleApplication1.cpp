@@ -246,9 +246,29 @@ char* StrChrRec(char* str, char tok)
 		return (StrChrRec(str + 1, tok));
 }
 
+bool FindStrInStr(char * s1, char *s2)
+{
+	if (*s1 == 0 && *s2 != 0)
+		return false;
+	if (*s2 == 0)
+		return true;
+	if (*s2 != *s1)
+		return false;
+	else
+		return FindStrInStr(s1 + 1, s2 + 1);
+}
+
+const char *StrStrRec2(char * s1, char *s2)
+{
+	if (FindStrInStr(s1, s2))
+		return s1;
+	else
+		return StrStrRec2(s1 + 1, s2 + 1);
+}
+
 char* StrStrRec(char* str0, char* str1)
 {
-	if (*str0 == 0 || str1 == 0)
+	if (*str0 == 0 || *str1 == 0)
 		return nullptr;
 	else if (*str0 == *str1)
 	{
@@ -282,10 +302,11 @@ int main()
 	printf("Le token est en position %d\n", pos);*/
 
 	char Dest[1024] = "Le test marche ?";
+
 	char Text[1024] = " Oui il marche !";
-	
+
 	char Token = 'm';
-	char Find[1024] = "Oui";
+	char Find[1024] = "marche";
 
 	//int SizeBuff = 32;
 	//char *Buffer = (char *)malloc(sizeof(char));
@@ -295,14 +316,16 @@ int main()
 	//MemCpyRec(Dest, Text, strlen(Text));
 	//printf("%d\n", StrlenRec(Text));
 	//printf("%s\n", Dest);
-	
 
-	printf("[StrChrRec] Source = %s | Token = %c | Resultat =  %s\n", Dest, Token, StrChrRec(Dest, Token));
 
-	printf("[StrCatRec] Str1 = %s | Str2 = %s |", Dest, Text);
-	StrCatRec(Dest, Text);
-	printf(" Resultat = %s\n", Dest);
+	//printf("[StrChrRec] Source = %s | Token = %c | Resultat =  %s\n", Dest, Token, StrChrRec(Dest, Token));
 
-	printf("[StrStrRec] Source = %s | String to find = %s | Resultat = %s \n", Dest, Find,  StrStrRec(Dest, Find));
+	//printf("[StrCatRec] Str1 = %s | Str2 = %s |", Dest, Text);
+	//StrCatRec(Dest, Text);
+	//printf(" Resultat = %s\n", Dest);
+	char Test1[1024] = "Le test marche ?";
+	char Test2[1024] = "Le test marche ?";
+	printf("[StrStrRec] Source = %s | String to find = %s | Resultat = %s \n", Dest, Find, StrStrRec(Dest, Find));
+	//printf("%d", FindStrInStr(Test1, Test1));
 }
 
