@@ -11,19 +11,86 @@
 using namespace sf;
 using namespace std;
 
-Data _data;
+int			fps;
+Data		_data;
+Vector2f	screenSize(800, 600);
+Font		font;
 
-Vector2f screenSize(800, 600);
+float		WallSize = 50;
+float		offSetSpeed = 1.0f;
+float		offSetCrosshairRange = 70;
 
-float WallSize = 50;
-float offSetSpeed = 1.0f;
-float offSetCrosshairRange = 50;
+Vector2f	mouseWorldPos;
 
-Vector2f _pos;
+GameState gameState;
 
-void	AddShell(Tank& tank, Vector2f& pos, float time)
+void	ShowDebug(RenderWindow& win, int fps)
 {
-	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 0.5f || tank.lastShootingTime == 0))
+	Text	fpsText;
+	Text	mousePosText;
+	Text	playerPosText;
+
+	fpsText.setFont(font);
+	fpsText.setFillColor(Color::Red);
+
+	playerPosText.setPosition(screenSize.x / 2, 0);
+	playerPosText.setFont(font);
+	playerPosText.setFillColor(Color::Red);
+
+	mousePosText.setPosition(screenSize.x - screenSize.x / 3, 0);
+	mousePosText.setFont(font);
+	mousePosText.setFillColor(Color::Red);
+
+	fpsText.setString(to_string(fps));
+	mousePosText.setString(to_string((int)mouseWorldPos.x) + " " + to_string((int)mouseWorldPos.y));
+	if (_data.tankList.empty() == false)
+		playerPosText.setString(to_string((int)_data.tankList[0].tank.getPosition().x) + " " + to_string((int)_data.tankList[0].tank.getPosition().y));
+
+	win.draw(playerPosText);
+	win.draw(mousePosText);
+	win.draw(fpsText);
+}
+
+void	ShowMessage(RenderWindow& win)
+{
+	Text	text;
+
+	switch (gameState)
+	{
+	case Menu:
+		break;
+	case Playing:
+		break;
+	case Pause:
+		text.setCharacterSize(100);
+		text.setFont(font);
+		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		text.setFillColor(Color::Red);
+		text.setString("Pause");
+		break;
+	case Loose:
+		text.setCharacterSize(100);
+		text.setFont(font);
+		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		text.setFillColor(Color::Red);
+		text.setString("You loose !");
+		break;
+	case Win:
+		text.setCharacterSize(100);
+		text.setFont(font);
+		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		text.setFillColor(Color::Green);
+		text.setString("You win !");
+		break;
+	default:
+		break;
+	}
+	win.draw(text);
+}
+
+void	AddShell(Tank& tank, Vector2f pos, float time)
+{
+	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 1.f || tank.lastShootingTime == 0))
 	{
 		tank.lastShootingTime = time;
 		tank.currentShell++;
@@ -43,18 +110,34 @@ void	ExcecuteShell(RenderWindow& win)
 void	DrawCrosshair(RenderWindow& win)
 {
 	Vector2f	tankPosition = _data.tankList[0].tank.getPosition();
-	float		xDistance = tankPosition.x - _pos.x;
-	float		yDistance = tankPosition.y - _pos.y;
+	float		xDistance = tankPosition.x - mouseWorldPos.x;
+	float		yDistance = tankPosition.y - mouseWorldPos.y;
 	float		Distance = sqrt(xDistance * xDistance + yDistance * yDistance);
 
 	float		xDirection = -xDistance / Distance;
 	float		yDirection = -yDistance / Distance;
 
-	CircleShape crosshair(3);
-	crosshair.setOrigin(3 / 2, 3 / 2);
-	crosshair.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
-	_data.tankList[0].SetGunAngle(_pos);
-	win.draw(crosshair);
+	CircleShape		dot(5);
+	RectangleShape	HorCross(Vector2f(10, 2));
+	RectangleShape	VerCross(Vector2f(2, 10));
+
+	HorCross.setOrigin(10 / 2, 2 / 2);
+	HorCross.setFillColor(Color::Red);
+	HorCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+
+	VerCross.setOrigin(2 / 2, 10 / 2);
+	VerCross.setFillColor(Color::Red);
+	VerCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+
+	dot.setOrigin(5, 5);
+	dot.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	dot.setFillColor(Color::Transparent);
+	dot.setOutlineThickness(1);
+	dot.setOutlineColor(Color::Red);
+	_data.tankList[0].SetGunAngle(mouseWorldPos);
+	win.draw(dot);
+	win.draw(HorCross);
+	win.draw(VerCross);
 }
 
 void	DrawElement(RenderWindow& win)
@@ -66,148 +149,162 @@ void	DrawElement(RenderWindow& win)
 		win.draw(tank.tank);
 		tank.SetGunToTankPosition();
 		win.draw(tank.gun);
+		win.draw(tank.circleGun);
 	}
 	for (Wall& elemen : _data.wallList)
 		win.draw(elemen.wall);
-
 }
 
 void	World(RenderWindow& win, float time)
 {
-	for (Tank& tank : _data.tankList)
+	if (gameState == GameState::Playing)
 	{
-		for (Tank& otherTank : _data.tankList)
-			if (tank.name != otherTank.name && tank.tank.getGlobalBounds().intersects(otherTank.tank.getGlobalBounds()))
-				tank.tank.setPosition(tank.lastposition);
-		for (Wall& wall : _data.wallList)
+		for (Tank& tank : _data.tankList)
 		{
-			if (tank.tank.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
+			if (tank.name != "Player")
 			{
-				_data.tankList[0].tank.setPosition(_data.tankList[0].lastposition);
-				offSetSpeed = 0;
+				tank.SetGunAngle(_data.tankList[0].tank.getPosition());
+				AddShell(tank, _data.tankList[0].tank.getPosition(), time);
+			}
+			for (Tank& otherTank : _data.tankList)
+				if (tank.name != otherTank.name && tank.tank.getGlobalBounds().intersects(otherTank.tank.getGlobalBounds()))
+					tank.tank.setPosition(tank.lastposition);
+			for (Wall& wall : _data.wallList)
+			{
+				if (tank.tank.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
+				{
+					_data.tankList[0].tank.setPosition(_data.tankList[0].lastposition);
+					offSetSpeed = 0;
+				}
+			}
+			tank.lastposition = tank.tank.getPosition();
+		}
+		for (Shell& shell : _data.shellList)
+		{
+			for (Tank& tankTarget : _data.tankList)
+			{
+				if (shell.shell.getGlobalBounds().intersects(tankTarget.tank.getGlobalBounds()))
+				{
+					shell.Explode = true;
+					tankTarget.IsAlive = false;
+					printf("Shooter : %s Hit %s\n", shell.shooterName, tankTarget.name);
+				}
+			}
+			for (Wall& wall : _data.wallList)
+			{
+				if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
+				{
+					shell.CurrentHit++;
+					if (shell.CurrentHit == shell.maxHit)
+						shell.Explode = true;
+					if (wall.axe == Axe::Horizontale)
+						shell.yDirection = -shell.yDirection;
+					else if (wall.axe == Axe::Verticale)
+						shell.xDirection = -shell.xDirection;
+				}
 			}
 		}
-		tank.lastposition = tank.tank.getPosition();
+		offSetSpeed = 5;
+		ExcecuteShell(win);
+		if (_data.tankList.empty() == false)
+		{
+			if (_data.tankList[0].name == "Player")
+			{
+				DrawCrosshair(win);
+				if (_data.tankList.size() == 1)
+					gameState = GameState::Win;
+			}
+			else
+				gameState = GameState::Loose;
+		}
+		else
+			gameState = GameState::Loose;
 	}
-
-	for (Shell& shell : _data.shellList)
-	{
-		for (Tank& tankTarget : _data.tankList)
-		{
-			if (shell.shell.getGlobalBounds().intersects(tankTarget.tank.getGlobalBounds()))
-			{
-				shell.Explode = true;
-				tankTarget.IsAlive = false;
-				printf("Shooter : %s Hit %s\n", shell.shooterName, tankTarget.name);
-			}
-		}
-		for (Wall& wall : _data.wallList)
-		{
-			if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
-			{
-				if (wall.axe == Axe::Horizontale)
-					shell.yDirection = -shell.yDirection;
-				else if (wall.axe == Axe::Verticale)
-					shell.xDirection = -shell.xDirection;
-			}
-		}
-	}
-	offSetSpeed = 5;
-	ExcecuteShell(win);
-	if (_data.tankList.empty() == false)
-		DrawCrosshair(win);
 	DrawElement(win);
 }
 
 int	main()
 {
-	ContextSettings settings;
-	settings.antialiasingLevel = 2;
-	RenderWindow window(VideoMode(screenSize.x, screenSize.y), "SFML works!");
+	ContextSettings		settings;
+	settings.antialiasingLevel = 10;
+	RenderWindow		window(VideoMode(screenSize.x, screenSize.y), "SFML works!");
+	window.setMouseCursorVisible(false);
 	window.setVerticalSyncEnabled(true);
 
+	Clock	clock;
+	Time	time = clock.getElapsedTime();
+	Time	frameStart;
+	Time	frameEnd;
+	Time	lastFrame;
 
-	Clock clock;
-	Time time = clock.getElapsedTime();
-	Time frameStart;
-	Time frameEnd;
-	Time lastFrame;
-
-	Text fpsText;
-	Text mousePosText;
-	Text playerPosText;
-	Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
 
-	fpsText.setFont(font);
-	fpsText.setFillColor(Color::Red);
 
-	playerPosText.setPosition(500, 0);
-	playerPosText.setFont(font);
-	playerPosText.setFillColor(Color::Red);
-
-	mousePosText.setPosition(1000, 0);
-	mousePosText.setFont(font);
-	mousePosText.setFillColor(Color::Red);
-
-	float fps;
-	Vector2i mousePos;
+	Vector2i	mousePos;
+	bool IsPause = false;
 
 	_data.AddWall("WallUP", Axe::Horizontale, Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
 	_data.AddWall("WallLeft", Axe::Verticale, Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
 	_data.AddWall("WallRight", Axe::Verticale, Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
 	_data.AddWall("WallDown", Axe::Horizontale, Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
 
-	_data.AddTank("Player", Vector2f(100, 500), Vector2f(30, 30), Color::Blue);
-	//_data.AddTank("Bot 1", Vector2f(400, 80), Vector2f(30, 30), Color::Red);
-	//_data.AddTank("Bot 2", Vector2f(400, 160), Vector2f(30, 30), Color::Red);
+	_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
+	_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
+	_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
 
-	Direction direction;
+	gameState = GameState::Pause;
 
 	while (window.isOpen())
 	{
+		window.clear(Color(212, 192, 171, 255));
 		frameStart = clock.getElapsedTime();
 		fps = 1.0f / (frameStart - lastFrame).asSeconds();
 
 		Event event;
 		while (window.pollEvent(event))
 		{
-			switch (event.key.code)
+			if (event.type == Event::KeyPressed)
 			{
-			case Keyboard::E:
-				printf("FPS : %f\n", fps);
-				break;
-			default:
-				break;
+				if (event.key.code == Keyboard::Space)
+				{
+					IsPause = !IsPause;
+					if (IsPause)
+					{
+						gameState = GameState::Pause;
+						window.setMouseCursorVisible(true);
+					}			
+					else
+					{
+						gameState = GameState::Playing;
+						window.setMouseCursorVisible(false);
+					}	
+				}
+				else if (event.type == Event::LostFocus)
+				{
+					IsPause = true;
+					gameState = GameState::Pause;
+				}
 			}
+				
 			if (event.type == Event::Closed)
 				window.close();
 		}
-		window.clear();
+
 		mousePos = Mouse::getPosition(window);
-		_pos = window.mapPixelToCoords(mousePos);
-		if (_data.tankList.empty() == false)
+		mouseWorldPos = window.mapPixelToCoords(mousePos);
+
+		if (gameState == GameState::Playing)
 		{
-			if (_data.tankList.empty() == false && _data.tankList[0].name == "Player")
-			{
-				if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(Direction::Right, offSetSpeed);
-				if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(Direction::Left, offSetSpeed);
-				if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(Direction::Up, offSetSpeed);
-				if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(Direction::Down, offSetSpeed);
-				if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], _pos, frameStart.asSeconds());
-			}
-
+			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(Direction::Right, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(Direction::Left, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(Direction::Up, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(Direction::Down, offSetSpeed);
+			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
 		}
+
 		World(window, frameStart.asSeconds());
-
-		fpsText.setString(to_string(fps));
-		//mousePosText.setString(to_string(mouseWorldPos.x) + " " + to_string(mouseWorldPos.y));
-		//playerPosText.setString(to_string(_data.tankList[0].tank.getPosition().x) + " " + to_string(_data.tankList[0].tank.getPosition().y));
-
-		window.draw(playerPosText);
-		window.draw(mousePosText);
-		window.draw(fpsText);
-
+		//ShowDebug(window, fps);
+		ShowMessage(window);
 		window.display();
 
 		frameEnd = clock.getElapsedTime();
