@@ -6,18 +6,17 @@ using namespace sf;
 class Wall
 {
 public:
-	const char* name;
+	const char*		name;
 	RectangleShape	wall;
-	Axe axe;
+	Axe				axe;
+
 	Wall(const char * _name , Axe _axe, Vector2f _pos, Vector2f _size, Color _color)
 	{
 		name = _name;
-		axe = _axe;
+		axe	= _axe;
 		wall.setPosition(_pos);
 		wall.setSize(_size);
 		wall.setFillColor(_color);
 	};
-
-	~Wall() {};
 };
 
