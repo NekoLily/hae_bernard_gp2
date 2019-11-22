@@ -14,7 +14,7 @@ public:
 	float		yDirection = 0;
 	float		offSetSpeed = 5;
 	bool		Explode = false;
-	int			maxHit = 2;
+	int			maxHit = 3;
 	int			CurrentHit = 0;
 
 	Shell(const char* _name, Vector2f _pos, float _size, Color _color = Color::Red)

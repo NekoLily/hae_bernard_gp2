@@ -1,12 +1,8 @@
 #pragma once
-enum Axe
-{
-	Horizontale, Verticale
-};
 
 enum Direction
 {
-	Up, Left, Right, Down
+	Up, Left, Right, Down, Null
 };
 
 enum GameState

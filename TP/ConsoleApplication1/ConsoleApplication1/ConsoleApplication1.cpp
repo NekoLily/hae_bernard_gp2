@@ -24,6 +24,45 @@ Vector2f	mouseWorldPos;
 
 GameState gameState;
 
+Direction	CheckCollisionSide(Shell shell, Wall wall)
+{
+	Rect<float> shellRect = shell.shell.getGlobalBounds();
+	Rect<float> wallRect = wall.wall.getGlobalBounds();
+
+	float shellRectRight	= shellRect.left+ shellRect.width;
+	float shellRectBot		= shellRect.top	+ shellRect.height;
+	float wallRectRight		= wallRect.left	+ wallRect.width;
+	float walllRectBot		= wallRect.top	+ wallRect.height;
+
+	Direction	Side = Direction::Null;
+
+	//printf("shell L:%f R:%f T:%f B:%f\n", shellRect.left, shellRectRight, shellRect.top, shellRectBot);
+	//printf("wall : %s L:%f R:%f  T:%f B:%f W:%f H:%f\n",wall.name,  wallRect.left, wallRectRight, wallRect.top, walllRectBot, wallRect.width, wallRect.height);
+
+	if (shellRectRight >= wallRect.left && shellRect.left <= wallRect.left)
+	{
+		//printf("Left\n");
+		Side = Direction::Left;
+	}
+
+	else if (shellRect.left <= wallRectRight && shellRectRight -1 >= wallRectRight -1)
+	{
+		//printf("Right\n");
+		Side = Direction::Right;
+	}
+	else if (shellRectBot >= wallRect.top && shellRect.top  <= wallRect.top)
+	{
+		//printf("UpSide\n");
+		Side = Direction::Up;
+	}
+	else if (shellRect.top <= walllRectBot && shellRectBot >= walllRectBot)
+	{
+		//printf("BotSide\n");
+		Side = Direction::Down;
+	}
+	return Side;
+}
+
 void	ShowDebug(RenderWindow& win, int fps)
 {
 	Text	fpsText;
@@ -94,7 +133,7 @@ void	AddShell(Tank& tank, Vector2f pos, float time)
 	{
 		tank.lastShootingTime = time;
 		tank.currentShell++;
-		_data.AddShell(tank, pos, 2);
+		_data.AddShell(tank, pos, 4);
 	}
 }
 
@@ -158,12 +197,13 @@ void	World(RenderWindow& win, float time)
 {
 	if (gameState == GameState::Playing)
 	{
+		ExcecuteShell(win);
 		for (Tank& tank : _data.tankList)
 		{
 			if (tank.name != "Player")
 			{
 				tank.SetGunAngle(_data.tankList[0].tank.getPosition());
-				//AddShell(tank, _data.tankList[0].tank.getPosition(), time);
+				AddShell(tank, _data.tankList[0].tank.getPosition(), time);
 			}
 			for (Tank& otherTank : _data.tankList)
 				if (tank.name != otherTank.name && tank.tank.getGlobalBounds().intersects(otherTank.tank.getGlobalBounds()))
@@ -184,8 +224,8 @@ void	World(RenderWindow& win, float time)
 			{
 				if (shell.shell.getGlobalBounds().intersects(tankTarget.tank.getGlobalBounds()))
 				{
-					//shell.Explode = true;
-					//tankTarget.IsAlive = false;
+					shell.Explode = true;
+					tankTarget.IsAlive = false;
 					printf("Shooter : %s Hit %s\n", shell.shooterName, tankTarget.name);
 				}
 			}
@@ -193,47 +233,39 @@ void	World(RenderWindow& win, float time)
 			{
 				if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 				{
-					Rect<float> shellRect = shell.shell.getGlobalBounds();
-					Rect<float> wallRect = wall.wall.getGlobalBounds();
 					shell.CurrentHit++;
 
-					float shellRectRight = shellRect.left + shellRect.width;
-					float shellRectBot = shellRect.top + shellRect.width;
-					float wallRectRight = wallRect.left + wallRect.width;
-					float walllRectBot = wallRect.top + wallRect.width;
 					if (shell.CurrentHit == shell.maxHit)
 						shell.Explode = true;
-					printf("shell L:%f R:%f T:%f B:%f\n", shellRect.left, shellRectRight, shellRect.top, shellRect.top + shellRect.height);
-					printf("wall L:%f R:%f  T:%f B:%f W:%f H:%f\n", wallRect.left, wallRectRight, wallRect.top, walllRectBot, wallRect.width, wallRect.height);
-					if (wall.name == "WallMap")
-					{
-						if (shellRect.left <= wallRectRight && shellRectRight + shell.offSetSpeed >= wallRect.width)
-							shell.xDirection = -shell.xDirection;
 
-						if (shellRect.top <= walllRectBot && shellRectBot + shell.offSetSpeed >= wallRect.height)
-							shell.yDirection = -shell.yDirection;
-					}
-					else
+					Direction side = CheckCollisionSide(shell, wall);
+					switch (side)
 					{
-						if (shellRect.top + offSetSpeed >= wallRect.top && shellRectBot + offSetSpeed <= walllRectBot)
-						{
-							printf("Side\n");
-							shell.xDirection = -shell.xDirection;
-						}
-							
-						else if (shellRectRight + offSetSpeed >= wallRect.left && shellRectRight + offSetSpeed <= wallRectRight)
-						{
-							printf("UpSide\n");
-							shell.yDirection = -shell.yDirection;
-						}
-							
+					case Up:
+						if (shell.yDirection > 0)
+						shell.yDirection = -shell.yDirection;
+						break;
+					case Left:
+						if (shell.xDirection > 0)
+						shell.xDirection = -shell.xDirection;
+						break;
+					case Right:
+						if (shell.xDirection < 0)
+						shell.xDirection = -shell.xDirection;
+						break;
+					case Down:
+						if (shell.yDirection < 0)
+						shell.yDirection = -shell.yDirection;
+						break;
+					default:
+						break;
 					}
 					printf("\n");
 				}
 			}
 		}
 		offSetSpeed = 5;
-		ExcecuteShell(win);
+		
 		if (_data.tankList.empty() == false)
 		{
 			if (_data.tankList[0].name == "Player")
@@ -271,14 +303,13 @@ int	main()
 	Vector2i	mousePos;
 	bool IsPause = false;
 
-	_data.AddWall("WallMap", Axe::Horizontale, Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
-	_data.AddWall("WallMap", Axe::Verticale, Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
-	_data.AddWall("WallMap", Axe::Verticale, Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
-	_data.AddWall("WallMap", Axe::Horizontale, Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
-	_data.AddWall("Obstacle", Axe::Horizontale, Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
-	_data.AddWall("Obstacle", Axe::Horizontale, Vector2f(screenSize.x / 2 - 200, screenSize.y / 2), Vector2f(50, 100));
-	_data.AddWall("Obstacle", Axe::Horizontale, Vector2f(screenSize.x / 2  - 200, screenSize.y / 2), Vector2f(150, 50));
-	_data.AddWall("Obstacle", Axe::Horizontale, Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
+	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
+	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
+	_data.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
+	_data.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
+	_data.AddWall("Obstacle verticale",  Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
+	_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 -100, screenSize.y / 2 + 100), Vector2f(150, 50));
+	_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
 	_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
 	_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
 	_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);

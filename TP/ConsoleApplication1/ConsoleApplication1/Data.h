@@ -35,9 +35,9 @@ public:
 		tankList.shrink_to_fit();
 	}
 
-	void	AddWall(const char* _name,Axe _axe,  Vector2f _position, Vector2f _size, Color _color = Color::White)
+	void	AddWall(const char* _name,  Vector2f _position, Vector2f _size, Color _color = Color::White)
 	{
-		Wall wall = Wall(_name, _axe, _position, _size, _color);
+		Wall wall = Wall(_name, _position, _size, _color);
 		wallList.push_back(wall);
 	}
 
