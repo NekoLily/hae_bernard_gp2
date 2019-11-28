@@ -19,6 +19,22 @@ public:
 		tankList.push_back(tank);
 	}
 
+	void	DecreaseCurrentShell(const char* _name)
+	{
+		std::vector<Tank>::iterator it = tankList.begin();
+		while (it != tankList.end())
+		{
+			if (it->name == _name)
+			{
+				it->currentShell--;
+				return;
+			}
+			else
+				++it;
+		}
+		tankList.shrink_to_fit();
+	}
+
 	void	RemoveTank()
 	{
 		std::vector<Tank>::iterator it = tankList.begin();
@@ -43,7 +59,7 @@ public:
 
 	void	AddShell(Tank _tank ,Vector2f _position, float _size, Color _color = Color::Red)
 	{
-		Shell	shell = Shell(_tank.name, _tank.tank.getPosition(), _size, _color);
+		Shell			shell = Shell(_tank.name, _tank.tank.getPosition(), _size, _color);
 		shell.Direction(_position);
 		shellList.push_back(shell);
 	}

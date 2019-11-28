@@ -15,7 +15,7 @@ public:
 	CircleShape		circleGun;
 	Vector2f		lastposition;
 	int				currentShell = 0;
-	int				maxShell = 100;
+	int				maxShell = 3;
 	float			lastShootingTime = 0;
 	bool			IsAlive = true;
 

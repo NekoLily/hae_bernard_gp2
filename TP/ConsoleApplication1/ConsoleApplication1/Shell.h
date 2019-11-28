@@ -6,13 +6,13 @@ using namespace sf;
 class	Shell
 {
 private:
-	float		offSetSpawnPos = 30;
+	float		offSetSpawnPos = 33;
 public:
 	const char* shooterName;
 	CircleShape	shell;
 	float		xDirection = 0;
 	float		yDirection = 0;
-	float		offSetSpeed = 5;
+	float		offSetSpeed = 2.5f;
 	bool		Explode = false;
 	int			maxHit = 3;
 	int			CurrentHit = 0;
@@ -22,7 +22,9 @@ public:
 		shooterName = _name;
 		shell.setRadius(_size);
 		shell.setFillColor(_color);
+		shell.setOrigin(Vector2f(shell.getRadius(), shell.getRadius()));
 		shell.setPosition(_pos);
+		
 	}
 
 	void	Direction(Vector2f _pos)

@@ -17,7 +17,7 @@ Vector2f	screenSize(800, 600);
 Font		font;
 
 float		WallSize = 50;
-float		offSetSpeed = 1.0f;
+float		offSetSpeed = 0.5f;
 float		offSetCrosshairRange = 70;
 
 Vector2f	mouseWorldPos;
@@ -29,28 +29,27 @@ Direction	CheckCollisionSide(Shell shell, Wall wall)
 	Rect<float> shellRect = shell.shell.getGlobalBounds();
 	Rect<float> wallRect = wall.wall.getGlobalBounds();
 
-	float shellRectRight	= shellRect.left+ shellRect.width;
-	float shellRectBot		= shellRect.top	+ shellRect.height;
-	float wallRectRight		= wallRect.left	+ wallRect.width;
-	float walllRectBot		= wallRect.top	+ wallRect.height;
+	float shellRectRight = shellRect.left + shellRect.width;
+	float shellRectBot = shellRect.top + shellRect.height;
+	float wallRectRight = wallRect.left + wallRect.width;
+	float walllRectBot = wallRect.top + wallRect.height;
 
 	Direction	Side = Direction::Null;
 
 	//printf("shell L:%f R:%f T:%f B:%f\n", shellRect.left, shellRectRight, shellRect.top, shellRectBot);
 	//printf("wall : %s L:%f R:%f  T:%f B:%f W:%f H:%f\n",wall.name,  wallRect.left, wallRectRight, wallRect.top, walllRectBot, wallRect.width, wallRect.height);
 
-	if (shellRectRight >= wallRect.left && shellRect.left <= wallRect.left)
+	if (shellRectRight > wallRect.left&& shellRect.left < wallRect.left && shell.xDirection > 0)
 	{
 		//printf("Left\n");
 		Side = Direction::Left;
 	}
-
-	else if (shellRect.left <= wallRectRight && shellRectRight -1 >= wallRectRight -1)
+	else if (shellRect.left <= wallRectRight && shellRectRight - 1 >= wallRectRight - 1 && shell.xDirection < 0)
 	{
 		//printf("Right\n");
 		Side = Direction::Right;
 	}
-	else if (shellRectBot >= wallRect.top && shellRect.top  <= wallRect.top)
+	else if (shellRectBot >= wallRect.top && shellRect.top <= wallRect.top)
 	{
 		//printf("UpSide\n");
 		Side = Direction::Up;
@@ -60,6 +59,7 @@ Direction	CheckCollisionSide(Shell shell, Wall wall)
 		//printf("BotSide\n");
 		Side = Direction::Down;
 	}
+	//printf("\n");
 	return Side;
 }
 
@@ -129,7 +129,7 @@ void	ShowMessage(RenderWindow& win)
 
 void	AddShell(Tank& tank, Vector2f pos, float time)
 {
-	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 1.f || tank.lastShootingTime == 0))
+	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 0.5f || tank.lastShootingTime == 0))
 	{
 		tank.lastShootingTime = time;
 		tank.currentShell++;
@@ -161,17 +161,21 @@ void	DrawCrosshair(RenderWindow& win)
 
 	HorCross.setOrigin(10 / 2, 2 / 2);
 	HorCross.setFillColor(Color::Red);
-	HorCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	//HorCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	HorCross.setPosition(mouseWorldPos);
 
 	VerCross.setOrigin(2 / 2, 10 / 2);
 	VerCross.setFillColor(Color::Red);
-	VerCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	//VerCross.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	VerCross.setPosition(mouseWorldPos);
 
 	dot.setOrigin(5, 5);
-	dot.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
 	dot.setFillColor(Color::Transparent);
 	dot.setOutlineThickness(1);
 	dot.setOutlineColor(Color::Red);
+	//dot.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
+	dot.setPosition(mouseWorldPos);
+
 	_data.tankList[0].SetGunAngle(mouseWorldPos);
 	win.draw(dot);
 	win.draw(HorCross);
@@ -195,9 +199,10 @@ void	DrawElement(RenderWindow& win)
 
 void	World(RenderWindow& win, float time)
 {
+	DrawElement(win);
 	if (gameState == GameState::Playing)
 	{
-		ExcecuteShell(win);
+		
 		for (Tank& tank : _data.tankList)
 		{
 			if (tank.name != "Player")
@@ -217,7 +222,7 @@ void	World(RenderWindow& win, float time)
 				}
 			}
 			tank.lastposition = tank.tank.getPosition();
-		}
+		}	
 		for (Shell& shell : _data.shellList)
 		{
 			for (Tank& tankTarget : _data.tankList)
@@ -226,6 +231,7 @@ void	World(RenderWindow& win, float time)
 				{
 					shell.Explode = true;
 					tankTarget.IsAlive = false;
+					_data.DecreaseCurrentShell(shell.shooterName);
 					printf("Shooter : %s Hit %s\n", shell.shooterName, tankTarget.name);
 				}
 			}
@@ -233,39 +239,40 @@ void	World(RenderWindow& win, float time)
 			{
 				if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 				{
-					shell.CurrentHit++;
-
-					if (shell.CurrentHit == shell.maxHit)
-						shell.Explode = true;
-
 					Direction side = CheckCollisionSide(shell, wall);
-					switch (side)
+					shell.CurrentHit++;
+					if (shell.CurrentHit == shell.maxHit)
 					{
-					case Up:
-						if (shell.yDirection > 0)
-						shell.yDirection = -shell.yDirection;
-						break;
-					case Left:
-						if (shell.xDirection > 0)
-						shell.xDirection = -shell.xDirection;
-						break;
-					case Right:
-						if (shell.xDirection < 0)
-						shell.xDirection = -shell.xDirection;
-						break;
-					case Down:
-						if (shell.yDirection < 0)
-						shell.yDirection = -shell.yDirection;
-						break;
-					default:
-						break;
+						shell.Explode = true;
+						_data.DecreaseCurrentShell(shell.shooterName);
 					}
-					printf("\n");
+					else
+						switch (side)
+						{
+						case Up:
+							if (shell.yDirection > 0)
+								shell.yDirection = -shell.yDirection;
+							break;
+						case Left:
+							if (shell.xDirection > 0)
+								shell.xDirection = -shell.xDirection;
+							break;
+						case Right:
+							if (shell.xDirection < 0)
+								shell.xDirection = -shell.xDirection;
+							break;
+						case Down:
+							if (shell.yDirection < 0)
+								shell.yDirection = -shell.yDirection;
+							break;
+						}
+					
 				}
 			}
+			offSetSpeed = 5;
+
 		}
-		offSetSpeed = 5;
-		
+		ExcecuteShell(win);
 		if (_data.tankList.empty() == false)
 		{
 			if (_data.tankList[0].name == "Player")
@@ -280,7 +287,6 @@ void	World(RenderWindow& win, float time)
 		else
 			gameState = GameState::Loose;
 	}
-	DrawElement(win);
 }
 
 int	main()
@@ -288,7 +294,7 @@ int	main()
 	ContextSettings		settings;
 	settings.antialiasingLevel = 10;
 	RenderWindow		window(VideoMode(screenSize.x, screenSize.y), "SFML works!");
-	window.setMouseCursorVisible(false);
+	window.setMouseCursorVisible(true);
 	window.setVerticalSyncEnabled(true);
 
 	Clock	clock;
@@ -301,14 +307,15 @@ int	main()
 
 
 	Vector2i	mousePos;
-	bool IsPause = false;
+	bool		isPause = false;
+	bool		isMouseCursorIsVisible = true;
 
 	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
 	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
 	_data.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
 	_data.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
-	_data.AddWall("Obstacle verticale",  Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
-	_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 -100, screenSize.y / 2 + 100), Vector2f(150, 50));
+	_data.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
+	_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
 	_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
 	_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
 	_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
@@ -329,25 +336,18 @@ int	main()
 			{
 				if (event.key.code == Keyboard::Space)
 				{
-					IsPause = !IsPause;
-					if (IsPause)
-					{
+					isPause = !isPause;
+					if (isPause)
 						gameState = GameState::Pause;
-						window.setMouseCursorVisible(true);
-					}
 					else
-					{
 						gameState = GameState::Playing;
-						window.setMouseCursorVisible(false);
-					}
 				}
 				else if (event.type == Event::LostFocus)
 				{
-					IsPause = true;
+					isPause = true;
 					gameState = GameState::Pause;
 				}
 			}
-
 			if (event.type == Event::Closed)
 				window.close();
 		}
@@ -357,12 +357,15 @@ int	main()
 
 		if (gameState == GameState::Playing)
 		{
+			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
 			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(Direction::Right, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(Direction::Left, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(Direction::Up, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(Direction::Down, offSetSpeed);
 			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
 		}
+		else
+			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
 
 		World(window, frameStart.asSeconds());
 		//ShowDebug(window, fps);
