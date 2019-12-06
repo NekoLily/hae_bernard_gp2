@@ -12,6 +12,7 @@
 #include "Particle.h"
 #include "FadingParticle.h"
 #include "Action.hpp"
+#include "Entity.hpp"
 #include <Box2D/Box2D.h>
 
 using namespace sf;
@@ -218,6 +219,10 @@ int main() {
 	walls[3].setPosition(0, winHeight - 1);
 	walls[3].setSize(Vector2f(winWidth, 16));
 
+	
+	g.init();
+	g.font = font;
+
 	while (window.isOpen())//on passe tout le temps DEBUT DE LA FRAME 
 	{
 		sf::Event event;//recup les evenement clavier/pad
@@ -314,7 +319,7 @@ int main() {
 		}
 
 		
-
+		
 		sf::Time dt = deltaClock.restart();
 
 		const int squareSpeed = 3;
@@ -337,7 +342,7 @@ int main() {
 		/////////////
 		/////////////
 		///DRAW START
-
+		g.draw(window);
 		if (showSegment >= 2) {
 
 			shp.setSize(Vector2f(100, 100));
