@@ -9,3 +9,8 @@ enum GameState
 {
 	Menu, Playing, Pause, Loose, Win
 };
+
+enum MenuState
+{
+	MainMenu, SinglePlayerMenu, MultiPlayerMenu,
+};

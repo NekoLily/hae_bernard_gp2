@@ -7,6 +7,7 @@
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
+#include "Button.h"
 
 using namespace sf;
 using namespace std;
@@ -23,6 +24,7 @@ float		offSetCrosshairRange = 70;
 Vector2f	mouseWorldPos;
 
 GameState gameState;
+MenuState menuState;
 
 Direction	CheckCollisionSide(Shell shell, Wall wall)
 {
@@ -63,7 +65,7 @@ Direction	CheckCollisionSide(Shell shell, Wall wall)
 	return Side;
 }
 
-void	ShowDebug(RenderWindow& win, int fps)
+void		ShowDebug(RenderWindow& win, int fps)
 {
 	Text	fpsText;
 	Text	mousePosText;
@@ -90,44 +92,107 @@ void	ShowDebug(RenderWindow& win, int fps)
 	win.draw(fpsText);
 }
 
-void	ShowMessage(RenderWindow& win)
+void		ShowEndMessage(RenderWindow& win)
 {
-	Text	text;
-
 	switch (gameState)
 	{
 	case Menu:
+		switch (menuState)
+		{
+		case MainMenu:
+		{
+			Text			titleText;
+			RectangleShape Button1;
+			Button1.setSize(Vector2f(470, 100));
+			Button1.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 9);
+			Button1.setFillColor(Color::Green);
+
+			/*RectangleShape Button2;
+			Button2.setSize(Vector2f(470, 70));
+			Button2.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2.7);
+			Button2.setFillColor(Color::Green);
+
+			RectangleShape Button3;
+			Button3.setSize(Vector2f(470, 70));
+			Button3.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+			Button3.setFillColor(Color::Green);*/
+
+			titleText.setCharacterSize(100);
+			titleText.setFont(font);
+			titleText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 10);
+			titleText.setString("MainMenu");
+
+			/*Text	singlePlayerText = titleText;
+			singlePlayerText.setCharacterSize(70);
+			singlePlayerText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 3);
+			singlePlayerText.setString("1 Players");
+
+			Text	multiPlayerText = titleText;
+			multiPlayerText.setCharacterSize(70);
+			multiPlayerText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+			multiPlayerText.setString("2 Players");*/
+
+			win.draw(Button1);
+			//win.draw(Button2);
+			//win.draw(Button3);
+			win.draw(titleText);
+			//win.draw(singlePlayerText);
+			//win.draw(multiPlayerText);
+
+			Button singlePlayerButton = Button(100, String("Player"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 3), Color::Black, font, Color::Green);
+			win.draw(singlePlayerButton.shapeButton);
+			win.draw(singlePlayerButton.textButton);
+		}
+			break;
+		case SinglePlayerMenu:
+			break;
+		case MultiPlayerMenu:
+			break;
+		default:
+			break;
+		}
 		break;
 	case Playing:
 		break;
 	case Pause:
-		text.setCharacterSize(100);
-		text.setFont(font);
-		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		text.setFillColor(Color::Red);
-		text.setString("Pause");
+	{
+		Text	pauseText;
+		pauseText.setCharacterSize(100);
+		pauseText.setFont(font);
+		pauseText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		pauseText.setFillColor(Color::Red);
+		pauseText.setString("Pause");
+		win.draw(pauseText);
+	}
 		break;
 	case Loose:
-		text.setCharacterSize(100);
-		text.setFont(font);
-		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		text.setFillColor(Color::Red);
-		text.setString("You loose !");
+	{
+		Text	looseText;
+		looseText.setCharacterSize(100);
+		looseText.setFont(font);
+		looseText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		looseText.setFillColor(Color::Red);
+		looseText.setString("You loose !");
+		win.draw(looseText);
 		break;
+	}		
 	case Win:
-		text.setCharacterSize(100);
-		text.setFont(font);
-		text.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		text.setFillColor(Color::Green);
-		text.setString("You win !");
+	{
+		Text	winText;
+		winText.setCharacterSize(100);
+		winText.setFont(font);
+		winText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
+		winText.setFillColor(Color::Green);
+		winText.setString("You win !");
+		win.draw(winText);
 		break;
+	}	
 	default:
 		break;
 	}
-	win.draw(text);
 }
 
-void	AddShell(Tank& tank, Vector2f pos, float time)
+void		AddShell(Tank& tank, Vector2f pos, float time)
 {
 	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 0.5f || tank.lastShootingTime == 0))
 	{
@@ -137,7 +202,7 @@ void	AddShell(Tank& tank, Vector2f pos, float time)
 	}
 }
 
-void	ExcecuteShell(RenderWindow& win)
+void		ExcecuteShell(RenderWindow& win)
 {
 	for (Shell& elem : _data.shellList)
 		elem.shell.move(elem.xDirection * elem.offSetSpeed, elem.yDirection * elem.offSetSpeed);
@@ -145,7 +210,7 @@ void	ExcecuteShell(RenderWindow& win)
 	_data.RemoveTank();
 }
 
-void	DrawCrosshair(RenderWindow& win)
+void		DrawCrosshair(RenderWindow& win)
 {
 	Vector2f	tankPosition = _data.tankList[0].tank.getPosition();
 	float		xDistance = tankPosition.x - mouseWorldPos.x;
@@ -182,7 +247,7 @@ void	DrawCrosshair(RenderWindow& win)
 	win.draw(VerCross);
 }
 
-void	DrawElement(RenderWindow& win)
+void		DrawElement(RenderWindow& win)
 {
 	for (Shell& shell : _data.shellList)
 		win.draw(shell.shell);
@@ -197,12 +262,11 @@ void	DrawElement(RenderWindow& win)
 		win.draw(elemen.wall);
 }
 
-void	World(RenderWindow& win, float time)
+void		World(RenderWindow& win, float time)
 {
 	DrawElement(win);
 	if (gameState == GameState::Playing)
 	{
-		
 		for (Tank& tank : _data.tankList)
 		{
 			if (tank.name != "Player")
@@ -222,7 +286,7 @@ void	World(RenderWindow& win, float time)
 				}
 			}
 			tank.lastposition = tank.tank.getPosition();
-		}	
+		}
 		for (Shell& shell : _data.shellList)
 		{
 			for (Tank& tankTarget : _data.tankList)
@@ -266,7 +330,7 @@ void	World(RenderWindow& win, float time)
 								shell.yDirection = -shell.yDirection;
 							break;
 						}
-					
+
 				}
 			}
 			offSetSpeed = 5;
@@ -292,23 +356,22 @@ void	World(RenderWindow& win, float time)
 int	main()
 {
 	ContextSettings		settings;
-	settings.antialiasingLevel = 10;
 	RenderWindow		window(VideoMode(screenSize.x, screenSize.y), "SFML works!");
+	Clock				clock;
+	Time				time = clock.getElapsedTime();
+	Time				frameStart;
+	Time				frameEnd;
+	Time				lastFrame;
+	Vector2i			mousePos;
+
+	bool				isPause = false;
+	bool				isMouseCursorIsVisible = true;
+
+	settings.antialiasingLevel = 10;
 	window.setMouseCursorVisible(true);
 	window.setVerticalSyncEnabled(true);
 
-	Clock	clock;
-	Time	time = clock.getElapsedTime();
-	Time	frameStart;
-	Time	frameEnd;
-	Time	lastFrame;
-
 	font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
-
-
-	Vector2i	mousePos;
-	bool		isPause = false;
-	bool		isMouseCursorIsVisible = true;
 
 	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
 	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
@@ -321,7 +384,8 @@ int	main()
 	_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
 	_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
 
-	gameState = GameState::Pause;
+	gameState = GameState::Menu;
+	menuState = MenuState::MainMenu;
 
 	while (window.isOpen())
 	{
@@ -332,7 +396,7 @@ int	main()
 		Event event;
 		while (window.pollEvent(event))
 		{
-			if (event.type == Event::KeyPressed)
+			if (event.type == Event::KeyPressed && gameState == GameState::Playing)
 			{
 				if (event.key.code == Keyboard::Space)
 				{
@@ -355,21 +419,31 @@ int	main()
 		mousePos = Mouse::getPosition(window);
 		mouseWorldPos = window.mapPixelToCoords(mousePos);
 
-		if (gameState == GameState::Playing)
+		switch (gameState)
 		{
+		case Menu:
+			break;
+		case Playing:
 			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
 			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(Direction::Right, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(Direction::Left, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(Direction::Up, offSetSpeed);
 			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(Direction::Down, offSetSpeed);
 			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
-		}
-		else
+			World(window, frameStart.asSeconds());
+			break;
+		case Pause:
 			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
-
-		World(window, frameStart.asSeconds());
+			break;
+		case Loose:
+			break;
+		case Win:
+			break;
+		default:
+			break;
+		}
 		//ShowDebug(window, fps);
-		ShowMessage(window);
+		ShowEndMessage(window);
 		window.display();
 
 		frameEnd = clock.getElapsedTime();
