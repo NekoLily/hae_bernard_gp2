@@ -54,7 +54,7 @@ public:
 		gun.setPosition(tank.getPosition());
 	}
 
-	void	Move(Direction _direction, float _speed)
+	void	Move(MoveDirection _direction, float _speed)
 	{
 		Vector2f _pos = tank.getPosition();
 		switch (_direction)

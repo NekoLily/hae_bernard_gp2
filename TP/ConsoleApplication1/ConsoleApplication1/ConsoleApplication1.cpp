@@ -7,7 +7,7 @@
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
-#include "Button.h"
+#include "UI.h"
 
 using namespace sf;
 using namespace std;
@@ -15,7 +15,7 @@ using namespace std;
 int			fps;
 Data		_data;
 Vector2f	screenSize(800, 600);
-Font		font;
+Font* font = new Font();
 
 float		WallSize = 50;
 float		offSetSpeed = 0.5f;
@@ -26,44 +26,7 @@ Vector2f	mouseWorldPos;
 GameState gameState;
 MenuState menuState;
 
-Direction	CheckCollisionSide(Shell shell, Wall wall)
-{
-	Rect<float> shellRect = shell.shell.getGlobalBounds();
-	Rect<float> wallRect = wall.wall.getGlobalBounds();
 
-	float shellRectRight = shellRect.left + shellRect.width;
-	float shellRectBot = shellRect.top + shellRect.height;
-	float wallRectRight = wallRect.left + wallRect.width;
-	float walllRectBot = wallRect.top + wallRect.height;
-
-	Direction	Side = Direction::Null;
-
-	//printf("shell L:%f R:%f T:%f B:%f\n", shellRect.left, shellRectRight, shellRect.top, shellRectBot);
-	//printf("wall : %s L:%f R:%f  T:%f B:%f W:%f H:%f\n",wall.name,  wallRect.left, wallRectRight, wallRect.top, walllRectBot, wallRect.width, wallRect.height);
-
-	if (shellRectRight > wallRect.left&& shellRect.left < wallRect.left && shell.xDirection > 0)
-	{
-		//printf("Left\n");
-		Side = Direction::Left;
-	}
-	else if (shellRect.left <= wallRectRight && shellRectRight - 1 >= wallRectRight - 1 && shell.xDirection < 0)
-	{
-		//printf("Right\n");
-		Side = Direction::Right;
-	}
-	else if (shellRectBot >= wallRect.top && shellRect.top <= wallRect.top)
-	{
-		//printf("UpSide\n");
-		Side = Direction::Up;
-	}
-	else if (shellRect.top <= walllRectBot && shellRectBot >= walllRectBot)
-	{
-		//printf("BotSide\n");
-		Side = Direction::Down;
-	}
-	//printf("\n");
-	return Side;
-}
 
 void		ShowDebug(RenderWindow& win, int fps)
 {
@@ -71,15 +34,15 @@ void		ShowDebug(RenderWindow& win, int fps)
 	Text	mousePosText;
 	Text	playerPosText;
 
-	fpsText.setFont(font);
+	fpsText.setFont(*font);
 	fpsText.setFillColor(Color::Red);
 
 	playerPosText.setPosition(screenSize.x / 2, 0);
-	playerPosText.setFont(font);
+	playerPosText.setFont(*font);
 	playerPosText.setFillColor(Color::Red);
 
 	mousePosText.setPosition(screenSize.x - screenSize.x / 3, 0);
-	mousePosText.setFont(font);
+	mousePosText.setFont(*font);
 	mousePosText.setFillColor(Color::Red);
 
 	fpsText.setString(to_string(fps));
@@ -92,101 +55,91 @@ void		ShowDebug(RenderWindow& win, int fps)
 	win.draw(fpsText);
 }
 
-void		ShowEndMessage(RenderWindow& win)
+void		InitMenu()
 {
-	switch (gameState)
+	switch (menuState)
 	{
-	case Menu:
-		switch (menuState)
-		{
-		case MainMenu:
-		{
-			Text			titleText;
-			RectangleShape Button1;
-			Button1.setSize(Vector2f(470, 100));
-			Button1.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 9);
-			Button1.setFillColor(Color::Green);
-
-			/*RectangleShape Button2;
-			Button2.setSize(Vector2f(470, 70));
-			Button2.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2.7);
-			Button2.setFillColor(Color::Green);
-
-			RectangleShape Button3;
-			Button3.setSize(Vector2f(470, 70));
-			Button3.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-			Button3.setFillColor(Color::Green);*/
-
-			titleText.setCharacterSize(100);
-			titleText.setFont(font);
-			titleText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 10);
-			titleText.setString("MainMenu");
-
-			/*Text	singlePlayerText = titleText;
-			singlePlayerText.setCharacterSize(70);
-			singlePlayerText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 3);
-			singlePlayerText.setString("1 Players");
-
-			Text	multiPlayerText = titleText;
-			multiPlayerText.setCharacterSize(70);
-			multiPlayerText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-			multiPlayerText.setString("2 Players");*/
-
-			win.draw(Button1);
-			//win.draw(Button2);
-			//win.draw(Button3);
-			win.draw(titleText);
-			//win.draw(singlePlayerText);
-			//win.draw(multiPlayerText);
-
-			Button singlePlayerButton = Button(100, String("Player"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 3), Color::Black, font, Color::Green);
-			win.draw(singlePlayerButton.shapeButton);
-			win.draw(singlePlayerButton.textButton);
-		}
-			break;
-		case SinglePlayerMenu:
-			break;
-		case MultiPlayerMenu:
-			break;
-		default:
-			break;
-		}
-		break;
-	case Playing:
-		break;
-	case Pause:
+	case MainMenu:
 	{
-		Text	pauseText;
-		pauseText.setCharacterSize(100);
-		pauseText.setFont(font);
-		pauseText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		pauseText.setFillColor(Color::Red);
-		pauseText.setString("Pause");
-		win.draw(pauseText);
+		Button singlePlayerButton = Button(470, 70, String("Single Player"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 3), Color::Black, font, Color::Green, MenuState::SinglePlayerMenu);
+		_data.ButtonList.push_back(singlePlayerButton);
+		Button MultiPlayerButton = Button(470, 70, String("Versus"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 2), Color::Black, font, Color::Green, MenuState::MultiPlayerMenu);
+		_data.ButtonList.push_back(MultiPlayerButton);
+	}
+	break;
+	case SinglePlayerMenu:
+		break;
+	case MultiPlayerMenu:
+		break;
+	case InGameMenu:
+		break;
+	case PauseMenu:
+	{
+		Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::MainMenu);
+		_data.ButtonList.push_back(quitButton);
+		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
+		_data.ButtonList.push_back(retryButton);
 	}
 		break;
-	case Loose:
-	{
-		Text	looseText;
-		looseText.setCharacterSize(100);
-		looseText.setFont(font);
-		looseText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		looseText.setFillColor(Color::Red);
-		looseText.setString("You loose !");
-		win.draw(looseText);
+	case WinMenu:
 		break;
-	}		
-	case Win:
+	case LooseMenu:
 	{
-		Text	winText;
-		winText.setCharacterSize(100);
-		winText.setFont(font);
-		winText.setPosition(screenSize.x - screenSize.x / 1.3, screenSize.y / 2);
-		winText.setFillColor(Color::Green);
-		winText.setString("You win !");
+		Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::MainMenu);
+		_data.ButtonList.push_back(quitButton);
+		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
+		_data.ButtonList.push_back(retryButton);
+	}
+		break;
+	default:
+		break;
+	}
+}
+
+void		DrawMenu(RenderWindow& win)
+{
+	switch (menuState)
+	{
+	case MainMenu:
+	{
+		CustomText		titleText = CustomText(100, font, Vector2f(screenSize.x /2, screenSize.y / 10), Color::Black, String("MainMenu"));
+		win.draw(titleText);
+		for (Button& button : _data.ButtonList)
+			button.DrawButton(win);
+	}
+	break;
+	case SinglePlayerMenu:
+		break;
+	case MultiPlayerMenu:
+		break;
+	case InGameMenu:
+		break;
+	case PauseMenu:
+	{
+		CustomText	pauseText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Pause"));
+		win.draw(pauseText);
+		for (Button& button : _data.ButtonList)
+			button.DrawButton(win);
+	}
+	break;
+	case WinMenu:
+	{
+		CustomText winText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Win"));
 		win.draw(winText);
+		for (Button& button : _data.ButtonList)
+			button.DrawButton(win);
 		break;
-	}	
+	}
+	break;
+	case LooseMenu:
+	{
+		CustomText looseText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Loose"));
+		win.draw(looseText);
+		for (Button& button : _data.ButtonList)
+			button.DrawButton(win);
+		break;
+	}
+	break;
 	default:
 		break;
 	}
@@ -264,7 +217,6 @@ void		DrawElement(RenderWindow& win)
 
 void		World(RenderWindow& win, float time)
 {
-	DrawElement(win);
 	if (gameState == GameState::Playing)
 	{
 		for (Tank& tank : _data.tankList)
@@ -303,7 +255,6 @@ void		World(RenderWindow& win, float time)
 			{
 				if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 				{
-					Direction side = CheckCollisionSide(shell, wall);
 					shell.CurrentHit++;
 					if (shell.CurrentHit == shell.maxHit)
 					{
@@ -311,31 +262,13 @@ void		World(RenderWindow& win, float time)
 						_data.DecreaseCurrentShell(shell.shooterName);
 					}
 					else
-						switch (side)
-						{
-						case Up:
-							if (shell.yDirection > 0)
-								shell.yDirection = -shell.yDirection;
-							break;
-						case Left:
-							if (shell.xDirection > 0)
-								shell.xDirection = -shell.xDirection;
-							break;
-						case Right:
-							if (shell.xDirection < 0)
-								shell.xDirection = -shell.xDirection;
-							break;
-						case Down:
-							if (shell.yDirection < 0)
-								shell.yDirection = -shell.yDirection;
-							break;
-						}
-
+						shell.CheckCollisionSide(wall);
 				}
+				if (shell.Explode)
+					break;
 			}
-			offSetSpeed = 5;
-
 		}
+		offSetSpeed = 5;
 		ExcecuteShell(win);
 		if (_data.tankList.empty() == false)
 		{
@@ -343,13 +276,23 @@ void		World(RenderWindow& win, float time)
 			{
 				DrawCrosshair(win);
 				if (_data.tankList.size() == 1)
-					gameState = GameState::Win;
+				{
+					gameState = GameState::End;
+					menuState = MenuState::WinMenu;
+				}
+
 			}
 			else
-				gameState = GameState::Loose;
+			{
+				gameState = GameState::End;
+				menuState = MenuState::LooseMenu;
+			}
 		}
 		else
-			gameState = GameState::Loose;
+		{
+			gameState = GameState::End;
+			menuState = MenuState::LooseMenu;
+		}
 	}
 }
 
@@ -371,20 +314,9 @@ int	main()
 	window.setMouseCursorVisible(true);
 	window.setVerticalSyncEnabled(true);
 
-	font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
+	font->loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
 
-	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
-	_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
-	_data.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
-	_data.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
-	_data.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
-	_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
-	_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
-	_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
-	_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
-	_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
-
-	gameState = GameState::Menu;
+	gameState = GameState::Start;
 	menuState = MenuState::MainMenu;
 
 	while (window.isOpen())
@@ -396,21 +328,87 @@ int	main()
 		Event event;
 		while (window.pollEvent(event))
 		{
-			if (event.type == Event::KeyPressed && gameState == GameState::Playing)
+			if (event.type == Event::KeyPressed)
 			{
-				if (event.key.code == Keyboard::Space)
+				switch (gameState)
 				{
-					isPause = !isPause;
-					if (isPause)
+				case Menu:
+					break;
+				case Playing:
+					if (event.key.code == Keyboard::Space)
+					{
+						isPause = true;
 						gameState = GameState::Pause;
-					else
+						menuState = MenuState::PauseMenu;
+						InitMenu();
+					}
+					else if (event.type == Event::LostFocus)
+					{
+						isPause = true;
+						gameState = GameState::Pause;
+						menuState = MenuState::PauseMenu;
+						InitMenu();
+					}
+					break;
+				case Pause:
+					if (event.key.code == Keyboard::Space)
+					{
+						isPause = true;
 						gameState = GameState::Playing;
+						_data.ButtonList.clear();
+					}
+					break;
+				default:
+					break;
 				}
-				else if (event.type == Event::LostFocus)
+
+			}
+			if (event.type == Event::MouseButtonPressed)
+			{
+				if (event.mouseButton.button == Mouse::Left)
 				{
-					isPause = true;
-					gameState = GameState::Pause;
+					//CircleShape mouseClick(5);
+					//mouseClick.setOrigin(Vector2f(mouseClick.getRadius(), mouseClick.getRadius()));
+					//mouseClick.setPosition(mouseWorldPos);
+					for (Button& button : _data.ButtonList)
+					{
+						if (button.CheckButton(mouseWorldPos))
+						{
+							menuState = button.state;
+							_data.ButtonList.clear();
+							switch (menuState)
+							{
+							case MainMenu:
+								gameState = GameState::Start;
+								_data.ClearData();
+								break;
+							case SinglePlayerMenu:
+								gameState = GameState::Loading;
+								break;
+							case MultiPlayerMenu:
+								break;
+							case InGameMenu:
+								break;
+							case PauseMenu:
+								break;
+							case WinMenu:
+								break;
+							case LooseMenu:
+								break;
+							case Reload:
+								_data.ClearData();
+								gameState = GameState::Loading;
+								break;
+							case Null:
+								break;
+							default:
+								break;
+							}
+						}
+
+					}
 				}
+
 			}
 			if (event.type == Event::Closed)
 				window.close();
@@ -421,29 +419,52 @@ int	main()
 
 		switch (gameState)
 		{
+		case Start:
+			InitMenu();
+			gameState = GameState::Menu;
+			break;
 		case Menu:
+			DrawMenu(window);
+			break;
+		case Loading:
+			_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
+			_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
+			_data.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
+			_data.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
+			_data.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
+			_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
+			_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
+			_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
+			_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
+			_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
+			gameState = GameState::Pause;
+			menuState = MenuState::PauseMenu;
 			break;
 		case Playing:
 			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
-			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(Direction::Right, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(Direction::Left, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(Direction::Up, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(Direction::Down, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(MoveDirection::Right, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(MoveDirection::Left, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(MoveDirection::Up, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(MoveDirection::Down, offSetSpeed);
 			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
+			DrawElement(window);
 			World(window, frameStart.asSeconds());
 			break;
 		case Pause:
+			DrawElement(window);
+			DrawMenu(window);
 			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
 			break;
-		case Loose:
-			break;
-		case Win:
+		case End:
+			InitMenu();
+			DrawElement(window);
+			DrawMenu(window);
+			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
 			break;
 		default:
 			break;
 		}
 		//ShowDebug(window, fps);
-		ShowEndMessage(window);
 		window.display();
 
 		frameEnd = clock.getElapsedTime();
