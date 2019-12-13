@@ -39,7 +39,7 @@ void Game::update(double dt)
 	if (Keyboard::isKeyPressed(Keyboard::Up) && Player->playerState != PlayerState::Falling)
 	{
 		Player->dy -= 0.7;
-		Player->playerState = PlayerState::Falling;
+		//Player->playerState = PlayerState::Falling;
 	}
 }
 
