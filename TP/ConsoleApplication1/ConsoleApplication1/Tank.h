@@ -60,9 +60,7 @@ public:
 	}
 
 	void	MoveTank(MoveDirection _direction)
-	{
-		float		xDistance = tank.getPosition().x;
-		float		yDistance = tank.getPosition().y;
+	{	
 		switch (_direction)
 		{
 		case Up:

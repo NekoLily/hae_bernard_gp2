@@ -437,7 +437,7 @@ int	main()
 			_data.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
 			_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
 			_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
-			_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 30), Color::Blue);
+			_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 50), Color::Blue);
 			_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
 			_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
 			gameState = GameState::Pause;
