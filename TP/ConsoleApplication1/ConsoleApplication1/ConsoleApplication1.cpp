@@ -18,7 +18,6 @@ Vector2f	screenSize(800, 600);
 Font* font = new Font();
 
 float		WallSize = 50;
-float		offSetSpeed = 0.5f;
 float		offSetCrosshairRange = 70;
 
 Vector2f	mouseWorldPos;
@@ -233,8 +232,13 @@ void		World(RenderWindow& win, float time)
 			{
 				if (tank.tank.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 				{
-					_data.tankList[0].tank.setPosition(_data.tankList[0].lastposition);
-					offSetSpeed = 0;
+					tank.tank.setPosition(tank.lastposition);
+					tank.tankSpeed = 0;
+					break;
+				}
+				else
+				{
+					tank.tankSpeed = 3;
 				}
 			}
 			tank.lastposition = tank.tank.getPosition();
@@ -268,7 +272,6 @@ void		World(RenderWindow& win, float time)
 					break;
 			}
 		}
-		offSetSpeed = 5;
 		ExcecuteShell(win);
 		if (_data.tankList.empty() == false)
 		{
@@ -442,10 +445,10 @@ int	main()
 			break;
 		case Playing:
 			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
-			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].Move(MoveDirection::Right, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].Move(MoveDirection::Left, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].Move(MoveDirection::Up, offSetSpeed);
-			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].Move(MoveDirection::Down, offSetSpeed);
+			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].MoveTank(MoveDirection::Right);
+			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].MoveTank(MoveDirection::Left);
+			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].MoveTank(MoveDirection::Up);
+			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].MoveTank(MoveDirection::Down);
 			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
 			DrawElement(window);
 			World(window, frameStart.asSeconds());

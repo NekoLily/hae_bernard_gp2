@@ -38,7 +38,6 @@ public:
 
 		xDirection = -xDistance / Distance;
 		yDirection = -yDistance / Distance;
-
 		shell.setPosition(shellPos.x + xDirection * offSetSpawnPos, shellPos.y + yDirection * offSetSpawnPos);
 	}
 
