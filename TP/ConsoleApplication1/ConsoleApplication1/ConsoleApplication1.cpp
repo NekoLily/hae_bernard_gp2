@@ -26,7 +26,6 @@ GameState gameState;
 MenuState menuState;
 
 
-
 void		ShowDebug(RenderWindow& win, int fps)
 {
 	Text	fpsText;
@@ -47,7 +46,7 @@ void		ShowDebug(RenderWindow& win, int fps)
 	fpsText.setString(to_string(fps));
 	mousePosText.setString(to_string((int)mouseWorldPos.x) + " " + to_string((int)mouseWorldPos.y));
 	if (_data.tankList.empty() == false)
-		playerPosText.setString(to_string((int)_data.tankList[0].tank.getPosition().x) + " " + to_string((int)_data.tankList[0].tank.getPosition().y));
+		playerPosText.setString(to_string((int)_data.tankList[0].rectangleTank.getPosition().x) + " " + to_string((int)_data.tankList[0].rectangleTank.getPosition().y));
 
 	win.draw(playerPosText);
 	win.draw(mousePosText);
@@ -79,7 +78,7 @@ void		InitMenu()
 		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
 		_data.ButtonList.push_back(retryButton);
 	}
-		break;
+	break;
 	case WinMenu:
 		break;
 	case LooseMenu:
@@ -89,7 +88,7 @@ void		InitMenu()
 		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
 		_data.ButtonList.push_back(retryButton);
 	}
-		break;
+	break;
 	default:
 		break;
 	}
@@ -101,7 +100,7 @@ void		DrawMenu(RenderWindow& win)
 	{
 	case MainMenu:
 	{
-		CustomText		titleText = CustomText(100, font, Vector2f(screenSize.x /2, screenSize.y / 10), Color::Black, String("MainMenu"));
+		CustomText		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("MainMenu"));
 		win.draw(titleText);
 		for (Button& button : _data.ButtonList)
 			button.DrawButton(win);
@@ -146,7 +145,7 @@ void		DrawMenu(RenderWindow& win)
 
 void		AddShell(Tank& tank, Vector2f pos, float time)
 {
-	if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 0.5f || tank.lastShootingTime == 0))
+	//if (tank.currentShell < tank.maxShell && ((time - tank.lastShootingTime) > 0.5f || tank.lastShootingTime == 0))
 	{
 		tank.lastShootingTime = time;
 		tank.currentShell++;
@@ -164,7 +163,7 @@ void		ExcecuteShell(RenderWindow& win)
 
 void		DrawCrosshair(RenderWindow& win)
 {
-	Vector2f	tankPosition = _data.tankList[0].tank.getPosition();
+	Vector2f	tankPosition = _data.tankList[0].rectangleTank.getPosition();
 	float		xDistance = tankPosition.x - mouseWorldPos.x;
 	float		yDistance = tankPosition.y - mouseWorldPos.y;
 	float		Distance = sqrt(xDistance * xDistance + yDistance * yDistance);
@@ -205,10 +204,8 @@ void		DrawElement(RenderWindow& win)
 		win.draw(shell.shell);
 	for (Tank& tank : _data.tankList)
 	{
-		win.draw(tank.tank);
-		tank.SetGunToTankPosition();
-		win.draw(tank.gun);
-		win.draw(tank.circleGun);
+		tank.SetGunOnTank();
+		win.draw(tank);
 	}
 	for (Wall& elemen : _data.wallList)
 		win.draw(elemen.wall);
@@ -222,52 +219,31 @@ void		World(RenderWindow& win, float time)
 		{
 			if (tank.name != "Player")
 			{
-				tank.SetGunAngle(_data.tankList[0].tank.getPosition());
-				AddShell(tank, _data.tankList[0].tank.getPosition(), time);
+				//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
+				//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
 			}
 			for (Tank& otherTank : _data.tankList)
-				if (tank.name != otherTank.name && tank.tank.getGlobalBounds().intersects(otherTank.tank.getGlobalBounds()))
-					tank.tank.setPosition(tank.lastposition);
+			{
+				if (tank.name != otherTank.name && tank.CheckIfCollideWithOtherTank(otherTank))
+					break;
+			}
 			for (Wall& wall : _data.wallList)
 			{
-				if (tank.tank.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
-				{
-					tank.tank.setPosition(tank.lastposition);
-					tank.tankSpeed = 0;
+				if (tank.CheckIfCollideWithWall(wall))
 					break;
-				}
-				else
-				{
-					tank.tankSpeed = 3;
-				}
 			}
-			tank.lastposition = tank.tank.getPosition();
+			tank.lastState = tank.tankTransform;
 		}
 		for (Shell& shell : _data.shellList)
 		{
-			for (Tank& tankTarget : _data.tankList)
+			for (Tank& tank : _data.tankList)
 			{
-				if (shell.shell.getGlobalBounds().intersects(tankTarget.tank.getGlobalBounds()))
-				{
-					shell.Explode = true;
-					tankTarget.IsAlive = false;
-					_data.DecreaseCurrentShell(shell.shooterName);
-					printf("Shooter : %s Hit %s\n", shell.shooterName, tankTarget.name);
-				}
+				if (shell.CheckIfCollideWithTank(tank))
+					break;
 			}
 			for (Wall& wall : _data.wallList)
 			{
-				if (shell.shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
-				{
-					shell.CurrentHit++;
-					if (shell.CurrentHit == shell.maxHit)
-					{
-						shell.Explode = true;
-						_data.DecreaseCurrentShell(shell.shooterName);
-					}
-					else
-						shell.CheckCollisionSide(wall);
-				}
+				shell.CheckIfCollideWithWall(wall);
 				if (shell.Explode)
 					break;
 			}

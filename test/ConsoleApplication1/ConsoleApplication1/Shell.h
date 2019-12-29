@@ -3,16 +3,14 @@
 #include <math.h>
 #include "Enum.h"
 #include "Wall.h"
-#include "Tank.h"
-
 using namespace sf;
 
 class	Shell
 {
 private:
-	float		offSetSpawnPos = 50;
+	float		offSetSpawnPos = 33;
 public:
-	Tank *owner = nullptr;
+	const char* shooterName;
 	CircleShape	shell;
 	float		xDirection = 0;
 	float		yDirection = 0;
@@ -23,10 +21,12 @@ public:
 
 	Shell(const char* _name, Vector2f _pos, float _size, Color _color = Color::Red)
 	{
+		shooterName = _name;
 		shell.setRadius(_size);
 		shell.setFillColor(_color);
 		shell.setOrigin(Vector2f(shell.getRadius(), shell.getRadius()));
-		shell.setPosition(_pos);	
+		shell.setPosition(_pos);
+		
 	}
 
 	void	SetDirection(Vector2f _pos)
@@ -39,33 +39,6 @@ public:
 		xDirection = -xDistance / Distance;
 		yDirection = -yDistance / Distance;
 		shell.setPosition(shellPos.x + xDirection * offSetSpawnPos, shellPos.y + yDirection * offSetSpawnPos);
-	}
-
-	bool	CheckIfCollideWithTank(Tank & tank)
-	{
-		if (shell.getGlobalBounds().intersects(tank.GetTankGlobalBounds()))
-		{
-			Explode = true;
-			tank.IsAlive = false;
-			owner->currentShell--;
-			return true;
-		}
-		return false;
-	}
-
-	void	CheckIfCollideWithWall(Wall & wall)
-	{
-		if (shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
-		{
-			CurrentHit++;
-			if (CurrentHit >= maxHit)
-			{
-				Explode = true;
-				owner->currentShell--;
-			}
-			else
-				CheckCollisionSide(wall);
-		}
 	}
 
 	void	CheckCollisionSide(Wall wall)
