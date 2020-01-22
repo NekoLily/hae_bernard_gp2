@@ -165,7 +165,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UI.h" />
-    <ClInclude Include="Data.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="Enum.h" />
     <ClInclude Include="Shell.h" />
     <ClInclude Include="Tank.h" />

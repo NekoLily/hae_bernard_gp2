@@ -1,66 +1,74 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 #include <string>
 #include <math.h>
+#include <SFML/Graphics.hpp>
 #include "Enum.h"
 #include "Wall.h"
 
+using namespace std;
 using namespace sf;
 
 class Tank : public Drawable, public Transformable
 {
+private:
+	Shader* shaderptr;
+	
+	vector<Texture*> explosionTexture;
+
+	int			currentExplosion = 0;
+	float		lastExplosionTime = 0;
+	
+	float			tankSpeed = 2.f;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const
+	{
+		states.transform *= tankTransform;
+
+		//states.shader = shaderptr;
+		target.draw(hull, states);
+		target.draw(gun);
+	}
+
+
 public:
 	Transform		tankTransform;
-	Transform		lastState;
+	Transform		lastTankTransform;
+	TankState		tankState = Alive;
 
-	RectangleShape	rectangleTank;
-	RectangleShape	gun;
-	CircleShape		circleGun;
+	RectangleShape	hull;
+	Sprite			gun;
 
 	const char*		name;
-
 	int				currentShell = 0;
 	int				maxShell = 3;
 	float			lastShootingTime = 0;
-	bool			IsAlive = true;
-	float			tankSpeed = 2.f;
 
-	Tank(const char* _name = "No name", Vector2f _pos = Vector2f(50, 50), Vector2f _size = Vector2f(30, 30), Color _color = Color::Red)
+	Tank(const char* _name, Vector2f _pos, Color _color, Shader *_shader, Texture *_hull, Texture * _gun, vector<Texture*> _explosionTexture)
 	{
 		tankTransform = Transform::Identity;
 		tankTransform.translate(_pos);
 		name = _name;
 
-		rectangleTank.setSize(_size);
-		rectangleTank.setOrigin(Vector2f(_size.x / 2, _size.y / 2));
-		rectangleTank.setFillColor(_color);
-		rectangleTank.setOutlineColor(Color::Black);
-		rectangleTank.setOutlineThickness(3);
+		hull.setSize(Vector2f(50, 70));
+		hull.setOrigin(Vector2f(hull.getSize().x / 2, hull.getSize().y / 2));
+		hull.setTexture(_hull);
 
-		gun.setSize(Vector2f(_size.x + 10,_size.y /5));
-		gun.setOrigin(Vector2f(0, gun.getSize().y / 2));
-		gun.setFillColor(Color::Green);
-		gun.setOutlineColor(Color::Black);
-		gun.setOutlineThickness(1.5);
-
-		circleGun.setFillColor(Color::Green);
-		circleGun.setOutlineColor(Color::Black);
-		circleGun.setOutlineThickness(2);
-		circleGun.setRadius(10);
-		circleGun.setOrigin(Vector2f(10, 10));
-
+		gun.setTexture(*_gun);
+		gun.setOrigin(Vector2f(hull.getSize().x / 2 + 20,170));
+		gun.scale(0.3, 0.3);
+		shaderptr =_shader;
+		explosionTexture = _explosionTexture;
 	};
 
 	void	SetGunAngle(Vector2f mouseWorldPos)
 	{
 		float result = atan2f(mouseWorldPos.y - gun.getPosition().y, mouseWorldPos.x - gun.getPosition().x) * 180 / 3.14159265;
-		gun.setRotation(result);
+		gun.setRotation(result + 90);
 	}
 
 	void	SetGunOnTank()
 	{
 		gun.setPosition(tankTransform.transformPoint(0, 5));
-		circleGun.setPosition(tankTransform.transformPoint(0, 5));
 	}
 
 	void	MoveTank(MoveDirection _direction)
@@ -92,14 +100,14 @@ public:
 
 	FloatRect	GetTankGlobalBounds()
 	{
-		return tankTransform.transformRect(rectangleTank.getGlobalBounds());
+		return tankTransform.transformRect(hull.getGlobalBounds());
 	}
 
 	bool	CheckIfCollideWithWall(Wall wall)
 	{
 		if (GetTankGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 		{
-			tankTransform = lastState;
+			tankTransform = lastTankTransform;
 			return true;
 		}
 		return false;
@@ -109,18 +117,33 @@ public:
 	{
 		if (GetTankGlobalBounds().intersects(otherTank.GetTankGlobalBounds()))
 		{
-			tankTransform = lastState;
+			tankTransform = lastTankTransform;
 			return true;
 		}
 		return false;
 	}
 
-private:
-	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const
+	void	DoExplosion(float time)
 	{
-		states.transform *= tankTransform;
-		target.draw(rectangleTank, states);
-		target.draw(gun);
-		target.draw(circleGun);
+		if ((time - lastExplosionTime) > 0.05f || lastExplosionTime == 0)
+		{
+			if (currentExplosion == 0)
+			{
+				hull.setScale(0.5f, 0.5f);
+				gun.setScale(0.5f, 0.5f);
+			}	
+			if (currentExplosion < 8)
+			{
+				hull.setTexture(explosionTexture[currentExplosion], true);
+				hull.setOrigin(hull.getTexture()->getSize().x / 2, hull.getTexture()->getSize().y / 2);
+
+				gun.setTexture(*explosionTexture[currentExplosion], true);
+				gun.setOrigin(gun.getTexture()->getSize().x / 2, gun.getTexture()->getSize().y / 2);
+				lastExplosionTime = time;
+				currentExplosion++;
+			}
+			else
+				tankState = TankState::Die;
+		}
 	}
 };

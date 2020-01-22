@@ -3,7 +3,8 @@
 #include <iostream> 
 #include <list>
 #include <iterator> 
-#include "Data.h"
+#include <string>
+#include "Game.h"
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
@@ -13,9 +14,19 @@ using namespace sf;
 using namespace std;
 
 int			fps;
-Data		_data;
+Game		game;
 Vector2f	screenSize(800, 600);
-Font* font = new Font();
+
+static Font* font = new Font();
+static Shader* simpleShader = new Shader();
+
+static Texture* blueHull = new Texture();
+static Texture* blueGun = new Texture();
+static Texture* lightShell = new Texture();
+
+static vector<Texture*> explosionTexture;
+static vector<Texture*> blueTankTexture;
+static vector<Texture*> brownTankTexture;
 
 float		WallSize = 50;
 float		offSetCrosshairRange = 70;
@@ -45,8 +56,8 @@ void		ShowDebug(RenderWindow& win, int fps)
 
 	fpsText.setString(to_string(fps));
 	mousePosText.setString(to_string((int)mouseWorldPos.x) + " " + to_string((int)mouseWorldPos.y));
-	if (_data.tankList.empty() == false)
-		playerPosText.setString(to_string((int)_data.tankList[0].rectangleTank.getPosition().x) + " " + to_string((int)_data.tankList[0].rectangleTank.getPosition().y));
+	if (game.tankList.empty() == false)
+		playerPosText.setString(to_string((int)game.tankList[0].hull.getPosition().x) + " " + to_string((int)game.tankList[0].hull.getPosition().y));
 
 	win.draw(playerPosText);
 	win.draw(mousePosText);
@@ -60,9 +71,9 @@ void		InitMenu()
 	case MainMenu:
 	{
 		Button singlePlayerButton = Button(470, 70, String("Single Player"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 3), Color::Black, font, Color::Green, MenuState::SinglePlayerMenu);
-		_data.ButtonList.push_back(singlePlayerButton);
+		game.ButtonList.push_back(singlePlayerButton);
 		Button MultiPlayerButton = Button(470, 70, String("Versus"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 2), Color::Black, font, Color::Green, MenuState::MultiPlayerMenu);
-		_data.ButtonList.push_back(MultiPlayerButton);
+		game.ButtonList.push_back(MultiPlayerButton);
 	}
 	break;
 	case SinglePlayerMenu:
@@ -74,9 +85,9 @@ void		InitMenu()
 	case PauseMenu:
 	{
 		Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::MainMenu);
-		_data.ButtonList.push_back(quitButton);
+		game.ButtonList.push_back(quitButton);
 		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
-		_data.ButtonList.push_back(retryButton);
+		game.ButtonList.push_back(retryButton);
 	}
 	break;
 	case WinMenu:
@@ -84,9 +95,9 @@ void		InitMenu()
 	case LooseMenu:
 	{
 		Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::MainMenu);
-		_data.ButtonList.push_back(quitButton);
+		game.ButtonList.push_back(quitButton);
 		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuState::Reload);
-		_data.ButtonList.push_back(retryButton);
+		game.ButtonList.push_back(retryButton);
 	}
 	break;
 	default:
@@ -102,7 +113,7 @@ void		DrawMenu(RenderWindow& win)
 	{
 		CustomText		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("MainMenu"));
 		win.draw(titleText);
-		for (Button& button : _data.ButtonList)
+		for (Button& button : game.ButtonList)
 			button.DrawButton(win);
 	}
 	break;
@@ -116,7 +127,7 @@ void		DrawMenu(RenderWindow& win)
 	{
 		CustomText	pauseText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Pause"));
 		win.draw(pauseText);
-		for (Button& button : _data.ButtonList)
+		for (Button& button : game.ButtonList)
 			button.DrawButton(win);
 	}
 	break;
@@ -124,7 +135,7 @@ void		DrawMenu(RenderWindow& win)
 	{
 		CustomText winText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Win"));
 		win.draw(winText);
-		for (Button& button : _data.ButtonList)
+		for (Button& button : game.ButtonList)
 			button.DrawButton(win);
 		break;
 	}
@@ -133,7 +144,7 @@ void		DrawMenu(RenderWindow& win)
 	{
 		CustomText looseText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Loose"));
 		win.draw(looseText);
-		for (Button& button : _data.ButtonList)
+		for (Button& button : game.ButtonList)
 			button.DrawButton(win);
 		break;
 	}
@@ -149,21 +160,13 @@ void		AddShell(Tank& tank, Vector2f pos, float time)
 	{
 		tank.lastShootingTime = time;
 		tank.currentShell++;
-		_data.AddShell(tank, pos, 4);
+		game.AddShell(tank, pos, lightShell, explosionTexture);
 	}
-}
-
-void		ExcecuteShell(RenderWindow& win)
-{
-	for (Shell& elem : _data.shellList)
-		elem.shell.move(elem.xDirection * elem.offSetSpeed, elem.yDirection * elem.offSetSpeed);
-	_data.RemoveShell();
-	_data.RemoveTank();
 }
 
 void		DrawCrosshair(RenderWindow& win)
 {
-	Vector2f	tankPosition = _data.tankList[0].rectangleTank.getPosition();
+	Vector2f	tankPosition = game.tankList[0].hull.getPosition();
 	float		xDistance = tankPosition.x - mouseWorldPos.x;
 	float		yDistance = tankPosition.y - mouseWorldPos.y;
 	float		Distance = sqrt(xDistance * xDistance + yDistance * yDistance);
@@ -192,7 +195,7 @@ void		DrawCrosshair(RenderWindow& win)
 	//dot.setPosition(tankPosition.x + xDirection * offSetCrosshairRange, tankPosition.y + yDirection * offSetCrosshairRange);
 	dot.setPosition(mouseWorldPos);
 
-	_data.tankList[0].SetGunAngle(mouseWorldPos);
+	game.tankList[0].SetGunAngle(mouseWorldPos);
 	win.draw(dot);
 	win.draw(HorCross);
 	win.draw(VerCross);
@@ -200,14 +203,14 @@ void		DrawCrosshair(RenderWindow& win)
 
 void		DrawElement(RenderWindow& win)
 {
-	for (Shell& shell : _data.shellList)
+	for (Shell& shell : game.shellList)
 		win.draw(shell.shell);
-	for (Tank& tank : _data.tankList)
+	for (Tank& tank : game.tankList)
 	{
 		tank.SetGunOnTank();
 		win.draw(tank);
 	}
-	for (Wall& elemen : _data.wallList)
+	for (Wall& elemen : game.wallList)
 		win.draw(elemen.wall);
 }
 
@@ -215,51 +218,18 @@ void		World(RenderWindow& win, float time)
 {
 	if (gameState == GameState::Playing)
 	{
-		for (Tank& tank : _data.tankList)
+		game.TankManager(time);
+		game.ShellManager(time);
+		if (game.tankList.empty() == false)
 		{
-			if (tank.name != "Player")
-			{
-				//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
-				//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
-			}
-			for (Tank& otherTank : _data.tankList)
-			{
-				if (tank.name != otherTank.name && tank.CheckIfCollideWithOtherTank(otherTank))
-					break;
-			}
-			for (Wall& wall : _data.wallList)
-			{
-				if (tank.CheckIfCollideWithWall(wall))
-					break;
-			}
-			tank.lastState = tank.tankTransform;
-		}
-		for (Shell& shell : _data.shellList)
-		{
-			for (Tank& tank : _data.tankList)
-			{
-				if (shell.CheckIfCollideWithTank(tank))
-					break;
-			}
-			for (Wall& wall : _data.wallList)
-			{
-				shell.CheckIfCollideWithWall(wall);
-				if (shell.Explode)
-					break;
-			}
-		}
-		ExcecuteShell(win);
-		if (_data.tankList.empty() == false)
-		{
-			if (_data.tankList[0].name == "Player")
+			if (game.tankList[0].name == "Player")
 			{
 				DrawCrosshair(win);
-				if (_data.tankList.size() == 1)
+				if (game.tankList.size() == 1)
 				{
 					gameState = GameState::End;
 					menuState = MenuState::WinMenu;
 				}
-
 			}
 			else
 			{
@@ -272,6 +242,59 @@ void		World(RenderWindow& win, float time)
 			gameState = GameState::End;
 			menuState = MenuState::LooseMenu;
 		}
+	}
+}
+
+void		LoadTexture()
+{
+	Texture* texture = new Texture();
+
+	if (!Shader::isAvailable)
+		printf("No shader available\n");
+	if (!simpleShader->loadFromFile("res/simple.vert", "res/bloom.frag"))
+		printf("unable to load shaders\n");
+
+	if (!blueHull->loadFromFile("res/Tank/Blue/Hull.png"))
+		printf("Unable to load blue hull\n");
+
+	if (!blueGun->loadFromFile("res/Tank/Blue/Gun.png"))
+		printf("Unable to load blue gun\n");
+
+	if (!lightShell->loadFromFile("res/Shell/Light_Shell.png"))
+		printf("Unable to load shell\n");
+
+	/*if (!hull->loadFromFile("res/Tank/Brown/Hull.png"))
+		printf("Unable to load brown hull\n");
+	brownTankTexture.push_back(hull);
+
+	gun = new Texture();
+	if (!gun->loadFromFile("res/Tank/Brown/Gun.png"))
+		printf("Unable to load brown gun\n");
+	brownTankTexture.push_back(gun);*/
+
+
+	///
+
+	texture = new Texture();
+	if (!texture->loadFromFile("res/Tank/Blue/Hull.png"))
+		printf("Unable to load blue hull\n");
+	else
+		blueTankTexture.push_back(texture);
+
+	texture = new Texture();
+	if (!texture->loadFromFile("res/Tank/Blue/Gun.png"))
+		printf("Unable to load blue gun\n");
+	else
+		blueTankTexture.push_back(texture);
+
+
+	for (int i = 1; i != 9; i++)
+	{
+		texture = new Texture();
+		if (!texture->loadFromFile("res/Explosion/Explosion" + to_string(i) + ".png"))
+			printf("Unable to load Explosion%d\n", i);
+		else
+			explosionTexture.push_back(texture);
 	}
 }
 
@@ -289,11 +312,12 @@ int	main()
 	bool				isPause = false;
 	bool				isMouseCursorIsVisible = true;
 
-	settings.antialiasingLevel = 10;
+	settings.antialiasingLevel = 0;
 	window.setMouseCursorVisible(true);
 	window.setVerticalSyncEnabled(true);
 
 	font->loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
+	LoadTexture();
 
 	gameState = GameState::Start;
 	menuState = MenuState::MainMenu;
@@ -334,13 +358,12 @@ int	main()
 					{
 						isPause = true;
 						gameState = GameState::Playing;
-						_data.ButtonList.clear();
+						game.ButtonList.clear();
 					}
 					break;
 				default:
 					break;
 				}
-
 			}
 			if (event.type == Event::MouseButtonPressed)
 			{
@@ -349,17 +372,17 @@ int	main()
 					//CircleShape mouseClick(5);
 					//mouseClick.setOrigin(Vector2f(mouseClick.getRadius(), mouseClick.getRadius()));
 					//mouseClick.setPosition(mouseWorldPos);
-					for (Button& button : _data.ButtonList)
+					for (Button& button : game.ButtonList)
 					{
 						if (button.CheckButton(mouseWorldPos))
 						{
 							menuState = button.state;
-							_data.ButtonList.clear();
+							game.ButtonList.clear();
 							switch (menuState)
 							{
 							case MainMenu:
 								gameState = GameState::Start;
-								_data.ClearData();
+								game.ClearData();
 								break;
 							case SinglePlayerMenu:
 								gameState = GameState::Loading;
@@ -375,7 +398,7 @@ int	main()
 							case LooseMenu:
 								break;
 							case Reload:
-								_data.ClearData();
+								game.ClearData();
 								gameState = GameState::Loading;
 								break;
 							case Null:
@@ -387,7 +410,6 @@ int	main()
 
 					}
 				}
-
 			}
 			if (event.type == Event::Closed)
 				window.close();
@@ -406,26 +428,28 @@ int	main()
 			DrawMenu(window);
 			break;
 		case Loading:
-			_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
-			_data.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
-			_data.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
-			_data.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
-			_data.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
-			_data.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
-			_data.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
-			_data.AddTank("Player", Vector2f(screenSize.x / 2, 500), Vector2f(30, 50), Color::Blue);
-			_data.AddTank("Bot 1", Vector2f(300, 80), Vector2f(30, 30), Color::Red);
-			_data.AddTank("Bot 2", Vector2f(500, 80), Vector2f(30, 30), Color::Red);
+			game.AddWall("WallMap", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
+			game.AddWall("WallMap", Vector2f(0, 0), Vector2f(WallSize, screenSize.y));
+			game.AddWall("WallMap", Vector2f(screenSize.x - WallSize, 0), Vector2f(WallSize, screenSize.y));
+			game.AddWall("WallMap", Vector2f(0, screenSize.y - WallSize), Vector2f(screenSize.x, WallSize));
+			game.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
+			game.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
+			game.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
+
+			game.AddTank("Player", Vector2f(screenSize.x / 2, 500), Color::Blue, simpleShader, blueHull, blueGun, explosionTexture);
+			game.AddTank("Bot 1", Vector2f(300, 100), Color::Red, simpleShader, blueHull, blueGun, explosionTexture);
+			game.AddTank("Bot 2", Vector2f(500, 100), Color::Red, simpleShader, blueHull, blueGun, explosionTexture);
+
 			gameState = GameState::Pause;
 			menuState = MenuState::PauseMenu;
 			break;
 		case Playing:
 			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
-			if (Keyboard::isKeyPressed(Keyboard::Right))_data.tankList[0].MoveTank(MoveDirection::Right);
-			if (Keyboard::isKeyPressed(Keyboard::Left))_data.tankList[0].MoveTank(MoveDirection::Left);
-			if (Keyboard::isKeyPressed(Keyboard::Up))_data.tankList[0].MoveTank(MoveDirection::Up);
-			if (Keyboard::isKeyPressed(Keyboard::Down))_data.tankList[0].MoveTank(MoveDirection::Down);
-			if (Mouse::isButtonPressed(Mouse::Left))AddShell(_data.tankList[0], mouseWorldPos, frameStart.asSeconds());
+			if (Keyboard::isKeyPressed(Keyboard::Right))game.tankList[0].MoveTank(MoveDirection::Right);
+			if (Keyboard::isKeyPressed(Keyboard::Left))game.tankList[0].MoveTank(MoveDirection::Left);
+			if (Keyboard::isKeyPressed(Keyboard::Up))game.tankList[0].MoveTank(MoveDirection::Up);
+			if (Keyboard::isKeyPressed(Keyboard::Down))game.tankList[0].MoveTank(MoveDirection::Down);
+			if (Mouse::isButtonPressed(Mouse::Left))AddShell(game.tankList[0], mouseWorldPos, frameStart.asSeconds());
 			DrawElement(window);
 			World(window, frameStart.asSeconds());
 			break;
@@ -443,7 +467,7 @@ int	main()
 		default:
 			break;
 		}
-		//ShowDebug(window, fps);
+		ShowDebug(window, fps);
 		window.display();
 
 		frameEnd = clock.getElapsedTime();

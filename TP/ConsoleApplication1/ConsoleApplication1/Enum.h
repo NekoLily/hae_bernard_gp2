@@ -14,3 +14,18 @@ enum MoveDirection
 {
 	Up, Left, Right, Down,
 };
+
+enum TankState
+{
+	Alive, TankExplode, Die,
+};
+
+enum ShellState
+{
+	Create, Moving, ShellExplode, Destroy,
+};
+
+enum GameMode
+{
+	Solo, Versus,
+};

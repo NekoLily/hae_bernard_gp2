@@ -1,32 +1,39 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <vector>
 #include <math.h>
 #include "Enum.h"
 #include "Wall.h"
 #include "Tank.h"
 
 using namespace sf;
+using namespace std;
 
 class	Shell
 {
 private:
-	float		offSetSpawnPos = 50;
-public:
-	Tank *owner = nullptr;
-	CircleShape	shell;
+	float		offSetSpawnPos = 65;
+	int			currentExplosion = 0;
+	float		lastExplosionTime = 0;
 	float		xDirection = 0;
 	float		yDirection = 0;
-	float		offSetSpeed = 2.5f;
-	bool		Explode = false;
+	float		offSetSpeed = 5;
 	int			maxHit = 3;
-	int			CurrentHit = 0;
+	int			currenthit = 0;
 
-	Shell(const char* _name, Vector2f _pos, float _size, Color _color = Color::Red)
+public:
+	Tank* owner = nullptr;
+	Sprite	shell;
+	ShellState	shellState = ShellState::Create;
+	vector<Texture*> explosionTexture;
+
+	Shell(const char* _name, Vector2f _pos, Texture* _shellTexture, vector<Texture*> _explosionTexture)
 	{
-		shell.setRadius(_size);
-		shell.setFillColor(_color);
-		shell.setOrigin(Vector2f(shell.getRadius(), shell.getRadius()));
-		shell.setPosition(_pos);	
+		shell.setTexture(*_shellTexture);
+
+		shell.setOrigin(_shellTexture->getSize().x / 2, _shellTexture->getSize().y / 2);
+		shell.setPosition(_pos);
+		explosionTexture = _explosionTexture;
 	}
 
 	void	SetDirection(Vector2f _pos)
@@ -38,29 +45,34 @@ public:
 
 		xDirection = -xDistance / Distance;
 		yDirection = -yDistance / Distance;
+
+		float result = atan2f((shellPos.y + yDirection) - shellPos.y, (shellPos.x + xDirection) - shellPos.x) * 180 / 3.14159265;
+		shell.setRotation(result + 90);
 		shell.setPosition(shellPos.x + xDirection * offSetSpawnPos, shellPos.y + yDirection * offSetSpawnPos);
+		shellState = ShellState::Moving;
 	}
 
-	bool	CheckIfCollideWithTank(Tank & tank)
+	bool	CheckIfCollideWithTank(Tank& tank)
 	{
 		if (shell.getGlobalBounds().intersects(tank.GetTankGlobalBounds()))
 		{
-			Explode = true;
-			tank.IsAlive = false;
+			//tank.IsAlive = false;
+			//tank.tankState = TankState::TankExplode;
+			shellState = ShellState::ShellExplode;
 			owner->currentShell--;
 			return true;
 		}
 		return false;
 	}
 
-	void	CheckIfCollideWithWall(Wall & wall)
+	void	CheckIfCollideWithWall(Wall& wall)
 	{
 		if (shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 		{
-			CurrentHit++;
-			if (CurrentHit >= maxHit)
+			currenthit++;
+			if (currenthit >= maxHit)
 			{
-				Explode = true;
+				shellState = ShellState::ShellExplode;
 				owner->currentShell--;
 			}
 			else
@@ -105,7 +117,34 @@ public:
 			if (yDirection < 0)
 				yDirection = -yDirection;
 		}
+		Vector2f	shellPos = shell.getPosition();
+		float result = atan2f((shellPos.y + yDirection) - shellPos.y, (shellPos.x + xDirection) - shellPos.x) * 180 / 3.14159265;
+		shell.setRotation(result + 90);
 		//printf("\n");
+	}
+
+	void	MoveShell()
+	{
+		if (shellState == ShellState::Moving)
+			shell.move(xDirection * offSetSpeed, yDirection * offSetSpeed);
+	}
+
+	void	DoExplosion(float Currenttime)
+	{
+		if ((Currenttime - lastExplosionTime) > 0.05f || lastExplosionTime == 0)
+		{	
+			if (currentExplosion == 0)
+				shell.setScale(0.5f, 0.5f);
+			if (currentExplosion < 8)
+			{
+				shell.setTexture(*explosionTexture[currentExplosion], true);
+				shell.setOrigin(shell.getTexture()->getSize().x / 2, shell.getTexture()->getSize().y / 2);
+				lastExplosionTime = Currenttime;
+				currentExplosion++;
+			}
+			else
+				shellState = ShellState::Destroy;
+		}
 	}
 };
 
