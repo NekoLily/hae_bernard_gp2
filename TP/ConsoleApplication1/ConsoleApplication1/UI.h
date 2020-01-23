@@ -9,7 +9,7 @@ using namespace sf;
 class CustomText : public Text
 {
 public:
-	CustomText(int _characterSize, Font * _font, Vector2f _pos, Color _fillColor, String _string)
+	CustomText(int _characterSize = 0, Font * _font = nullptr, Vector2f _pos = Vector2f(0, 0), Color _fillColor = Color(), String _string = "")
 	{
 		this->setCharacterSize(_characterSize);
 		this->setFont(*_font);
@@ -26,10 +26,10 @@ class Button
 public:
 	RectangleShape	shapeButton;
 	FloatRect		buttonBox;
-	MenuState		state;
+	MenuTag		state;
 	Text			text;
 
-	Button(float _buttonWidth, float _characterSize, String  _text, Vector2f _pos, Color _textcolor, Font* _font, Color _buttoncolor, MenuState _state)
+	Button(float _buttonWidth, float _characterSize, String  _text, Vector2f _pos, Color _textcolor, Font* _font, Color _buttoncolor, MenuTag _state)
 	{
 		shapeButton.setSize(Vector2f(_buttonWidth, _characterSize));
 		shapeButton.setPosition(_pos);

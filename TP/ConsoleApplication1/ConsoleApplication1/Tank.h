@@ -2,6 +2,7 @@
 #include <string>
 #include <math.h>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "Enum.h"
 #include "Wall.h"
 
@@ -12,13 +13,13 @@ class Tank : public Drawable, public Transformable
 {
 private:
 	Shader* shaderptr;
-	
-	vector<Texture*> explosionTexture;
 
+	vector<Texture*>		explosionTexture;
+	vector<SoundBuffer*>	soundBufferVec;
+	Sound					tankSound;
 	int			currentExplosion = 0;
 	float		lastExplosionTime = 0;
-	
-	float			tankSpeed = 2.f;
+	float		tankSpeed = 2;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const
 	{
@@ -29,72 +30,76 @@ private:
 		target.draw(gun);
 	}
 
+	void	SetGunOnHull()
+	{
+		gun.setPosition(tankTransform.transformPoint(0, 5));
+	}
 
 public:
 	Transform		tankTransform;
 	Transform		lastTankTransform;
-	TankState		tankState = Alive;
-
+	TankState		tankState = TankAlive;
 	RectangleShape	hull;
 	Sprite			gun;
 
 	const char*		name;
+	TankTag			tankTag;
+
 	int				currentShell = 0;
 	int				maxShell = 3;
 	float			lastShootingTime = 0;
 
-	Tank(const char* _name, Vector2f _pos, Color _color, Shader *_shader, Texture *_hull, Texture * _gun, vector<Texture*> _explosionTexture)
+	Tank(const char* _name, TankTag _tankTag, Vector2f _pos, Color _color, Shader* _shader, Texture* _hull, Texture* _gun, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
 	{
 		tankTransform = Transform::Identity;
 		tankTransform.translate(_pos);
 		name = _name;
+		tankTag = _tankTag;
 
 		hull.setSize(Vector2f(50, 70));
 		hull.setOrigin(Vector2f(hull.getSize().x / 2, hull.getSize().y / 2));
 		hull.setTexture(_hull);
 
 		gun.setTexture(*_gun);
-		gun.setOrigin(Vector2f(hull.getSize().x / 2 + 20,170));
+		gun.setOrigin(Vector2f(hull.getSize().x / 2 + 20, 170));
 		gun.scale(0.3, 0.3);
-		shaderptr =_shader;
+		SetGunOnHull();
+		shaderptr = _shader;
 		explosionTexture = _explosionTexture;
+		soundBufferVec = _soundBufferVec;
+
 	};
 
-	void	SetGunAngle(Vector2f mouseWorldPos)
+	void		SetGunAngle(Vector2f mouseWorldPos)
 	{
 		float result = atan2f(mouseWorldPos.y - gun.getPosition().y, mouseWorldPos.x - gun.getPosition().x) * 180 / 3.14159265;
 		gun.setRotation(result + 90);
 	}
 
-	void	SetGunOnTank()
+	void		MoveTank(MoveDirection _direction)
 	{
-		gun.setPosition(tankTransform.transformPoint(0, 5));
-	}
-
-	void	MoveTank(MoveDirection _direction)
-	{	
-		switch (_direction)
+		if (tankState == TankState::TankAlive)
 		{
-		case Up:
-		{
-			//rectangleTank.move(0, -tankSpeed);
-			tankTransform.translate(0, -1);
-			break;
-		}
-		case Left:
-			//rectangleTank.move(-tankSpeed, 0);
-			tankTransform.rotate(-1);
-			break;
-		case Right:
-			//rectangleTank.move(tankSpeed, 0);
-			tankTransform.rotate(1);
-			break;
-		case Down:
-			//rectangleTank.move(0, tankSpeed);
-			tankTransform.translate(0, 1);
-			break;
-		default:
-			break;
+			switch (_direction)
+			{
+			case Up:
+			{
+				tankTransform.translate(0, -1 * tankSpeed);
+				break;
+			}
+			case Left:
+				tankTransform.rotate(-1);
+				break;
+			case Right:
+				tankTransform.rotate(1);
+				break;
+			case Down:
+				tankTransform.translate(0, 1 * tankSpeed);
+				break;
+			default:
+				break;
+			}
+			SetGunOnHull();
 		}
 	}
 
@@ -103,7 +108,7 @@ public:
 		return tankTransform.transformRect(hull.getGlobalBounds());
 	}
 
-	bool	CheckIfCollideWithWall(Wall wall)
+	bool		CheckIfCollideWithWall(Wall& wall)
 	{
 		if (GetTankGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 		{
@@ -113,26 +118,31 @@ public:
 		return false;
 	}
 
-	bool	CheckIfCollideWithOtherTank(Tank otherTank)
+	bool		CheckIfCollideWithOtherTank(Tank& otherTank)
 	{
-		if (GetTankGlobalBounds().intersects(otherTank.GetTankGlobalBounds()))
-		{
-			tankTransform = lastTankTransform;
-			return true;
-		}
+		if (this == &otherTank)
+			return false;
+		if (otherTank.tankState != TankState::TankDestroy)
+			if (GetTankGlobalBounds().intersects(otherTank.GetTankGlobalBounds()))
+			{
+				tankTransform = lastTankTransform;
+				return true;
+			}
 		return false;
 	}
 
-	void	DoExplosion(float time)
+	void		DoExplosion(float time)
 	{
 		if ((time - lastExplosionTime) > 0.05f || lastExplosionTime == 0)
 		{
 			if (currentExplosion == 0)
 			{
+				tankSound.setBuffer(*soundBufferVec[0]);
+				tankSound.play();
 				hull.setScale(0.5f, 0.5f);
 				gun.setScale(0.5f, 0.5f);
-			}	
-			if (currentExplosion < 8)
+			}
+			if (currentExplosion < 9)
 			{
 				hull.setTexture(explosionTexture[currentExplosion], true);
 				hull.setOrigin(hull.getTexture()->getSize().x / 2, hull.getTexture()->getSize().y / 2);
@@ -143,7 +153,7 @@ public:
 				currentExplosion++;
 			}
 			else
-				tankState = TankState::Die;
+				tankState = TankState::TankDestroy;
 		}
 	}
 };

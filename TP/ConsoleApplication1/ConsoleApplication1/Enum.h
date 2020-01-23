@@ -2,12 +2,17 @@
 
 enum GameState
 {
-	Start, Loading, Menu, Playing, Retry, Pause, End,
+	Start, Loading, Menu, InGame, Retry, Pause, End,
 };
 
-enum MenuState
+enum InGameState
 {
-	MainMenu, SinglePlayerMenu, MultiPlayerMenu, InGameMenu, PauseMenu, WinMenu, LooseMenu, Reload, Null,
+	Playing, PlayerWin, PlayerLoose, Player1Win, Player2Win, Draw,
+};
+
+enum MenuTag
+{
+	MainMenu, SinglePlayerMenu, MultiPlayerMenu, InGameMenu, PauseMenu, WinMenu, LooseMenu, Player1WinMenu, Player2WinMenu, DrawMenu, Reload, Null,
 };
 
 enum MoveDirection
@@ -17,12 +22,22 @@ enum MoveDirection
 
 enum TankState
 {
-	Alive, TankExplode, Die,
+	TankAlive, TankExplode, TankDestroy, TankDead,
+};
+
+enum TankTag
+{
+	Player, Bot,
 };
 
 enum ShellState
 {
-	Create, Moving, ShellExplode, Destroy,
+	Shellinit, ShellMoving, ShellExplode, ShellDestroy,
+};
+
+enum FlashState
+{
+	FlashPlaying, FlashFisnih
 };
 
 enum GameMode

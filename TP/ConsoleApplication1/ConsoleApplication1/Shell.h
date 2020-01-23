@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <math.h>
 #include "Enum.h"
@@ -12,28 +13,32 @@ using namespace std;
 class	Shell
 {
 private:
-	float		offSetSpawnPos = 65;
-	int			currentExplosion = 0;
-	float		lastExplosionTime = 0;
-	float		xDirection = 0;
-	float		yDirection = 0;
-	float		offSetSpeed = 5;
-	int			maxHit = 3;
-	int			currenthit = 0;
+	float					offSetSpawnPos = 50;
+	int						currentExplosion = 0;
+	float					lastExplosionTime = 0;
+	float					xDirection = 0;
+	float					yDirection = 0;
+	float					offSetSpeed = 5;
+	int						maxHit = 0;
+	int						currenthit = 0;
+	Sound					shellSound;
+	vector<Texture*>		explosionTexture;
+	vector<SoundBuffer*>	soundBufferVec;
 
 public:
-	Tank* owner = nullptr;
-	Sprite	shell;
-	ShellState	shellState = ShellState::Create;
-	vector<Texture*> explosionTexture;
-
-	Shell(const char* _name, Vector2f _pos, Texture* _shellTexture, vector<Texture*> _explosionTexture)
+	Tank*		owner = nullptr;
+	Sprite		shell;
+	ShellState	shellState = ShellState::Shellinit;
+	
+	Shell(Tank* _ownerTank, Vector2f _targetDirection, Texture* _shellTexture, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
 	{
+		owner = _ownerTank;
 		shell.setTexture(*_shellTexture);
-
 		shell.setOrigin(_shellTexture->getSize().x / 2, _shellTexture->getSize().y / 2);
-		shell.setPosition(_pos);
+		shell.setPosition(owner->tankTransform.transformPoint(0, 0));
+		SetDirection(_targetDirection);
 		explosionTexture = _explosionTexture;
+		soundBufferVec = _soundBufferVec;
 	}
 
 	void	SetDirection(Vector2f _pos)
@@ -49,15 +54,16 @@ public:
 		float result = atan2f((shellPos.y + yDirection) - shellPos.y, (shellPos.x + xDirection) - shellPos.x) * 180 / 3.14159265;
 		shell.setRotation(result + 90);
 		shell.setPosition(shellPos.x + xDirection * offSetSpawnPos, shellPos.y + yDirection * offSetSpawnPos);
-		shellState = ShellState::Moving;
 	}
 
 	bool	CheckIfCollideWithTank(Tank& tank)
 	{
 		if (shell.getGlobalBounds().intersects(tank.GetTankGlobalBounds()))
 		{
-			//tank.IsAlive = false;
-			//tank.tankState = TankState::TankExplode;
+			if (&tank == owner && shellState == ShellState::Shellinit)
+				return false;
+			tank.tankState = TankState::TankExplode;
+			printf("%s has destroy !\n", tank.name);
 			shellState = ShellState::ShellExplode;
 			owner->currentShell--;
 			return true;
@@ -65,10 +71,12 @@ public:
 		return false;
 	}
 
-	void	CheckIfCollideWithWall(Wall& wall)
+	bool	CheckIfCollideWithWall(Wall& wall)
 	{
 		if (shell.getGlobalBounds().intersects(wall.wall.getGlobalBounds()))
 		{
+			if (shellState == ShellState::Shellinit)
+				shellState = ShellState::ShellMoving;
 			currenthit++;
 			if (currenthit >= maxHit)
 			{
@@ -77,7 +85,24 @@ public:
 			}
 			else
 				CheckCollisionSide(wall);
+			return true;
 		}
+		return false;
+	}
+
+	bool	CheckIfCollideWithOtherShell(Shell& otherShell)
+	{
+		if (this == &otherShell)
+			return false;
+		else if (otherShell.shellState != ShellState::ShellExplode && shell.getGlobalBounds().intersects(otherShell.shell.getGlobalBounds()))
+		{
+			shellState = ShellState::ShellExplode;
+			otherShell.shellState = ShellState::ShellExplode;
+			otherShell.owner->currentShell--;
+			owner->currentShell--;
+			return true;
+		}
+		return false;
 	}
 
 	void	CheckCollisionSide(Wall wall)
@@ -125,25 +150,35 @@ public:
 
 	void	MoveShell()
 	{
-		if (shellState == ShellState::Moving)
+		if (shellState == ShellState::ShellMoving || shellState == ShellState::Shellinit)
 			shell.move(xDirection * offSetSpeed, yDirection * offSetSpeed);
 	}
 
 	void	DoExplosion(float Currenttime)
 	{
 		if ((Currenttime - lastExplosionTime) > 0.05f || lastExplosionTime == 0)
-		{	
+		{
 			if (currentExplosion == 0)
+			{
+				shellSound.setBuffer(*soundBufferVec[1]);
+				shellSound.play();
 				shell.setScale(0.5f, 0.5f);
-			if (currentExplosion < 8)
+			}
+				
+			if (currentExplosion < 9)
 			{
 				shell.setTexture(*explosionTexture[currentExplosion], true);
 				shell.setOrigin(shell.getTexture()->getSize().x / 2, shell.getTexture()->getSize().y / 2);
 				lastExplosionTime = Currenttime;
 				currentExplosion++;
 			}
-			else
-				shellState = ShellState::Destroy;
+			else if (currentExplosion == 9)
+				shell.setTextureRect(IntRect(0,0,0,0));
+			else if ((Currenttime - lastExplosionTime) > 0.02f)
+			{
+				shellState = ShellState::ShellDestroy;
+			}
+				
 		}
 	}
 };

@@ -1,126 +1,215 @@
 #pragma once
 #include <list>
 #include <vector>
+#include <SFML/Audio.hpp>
 #include "UI.h"
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
+#include "Flash.h";
 #include "Enum.h"
 
 
 class Game
 {
+private:
+	int							playerAliveNumber = 0;
+	int							botAliveNumber = 0;
+
 public:
 	std::vector<Tank>			tankList;
 	std::vector<Wall>			wallList;
 	std::vector<Shell>			shellList;
-	std::vector<Button>			ButtonList;
+	std::vector<Flash>			flashList;
 	std::vector<CircleShape>	mouseEffectList;
 
-	void	AddTank(const char* _name, Vector2f _position, Color _color, Shader* _shader, Texture* _hull, Texture* _gun, vector<Texture*> explosionTexture)
+	Texture*					shellTexture;
+	vector<Texture*>			blueTankTexture;
+	vector<Texture*>			brownTankTexture;
+	vector<Texture*>			explosionTexture;
+	vector<Texture*>			flashTexture;
+	vector<SoundBuffer*>		soundBufferVec;
+
+	GameMode					gameMode;
+
+	void		DrawElement(RenderWindow& win)
 	{
-		tankList.push_back(Tank(_name, _position, _color, _shader, _hull, _gun, explosionTexture));
+		for (Wall& wall : wallList)
+			win.draw(wall.wall);
+		for (Tank& tank : tankList)
+			if (tank.tankState != TankState::TankDead)
+				win.draw(tank);
+		for (Shell& shell : shellList)
+			win.draw(shell.shell);
+		for (Flash& flash : flashList)
+			win.draw(flash.flash);
 	}
 
-	void	AddWall(const char* _name, Vector2f _position, Vector2f _size, Color _color = Color::White)
+	void		AddTank(const char* _name, TankTag _tankTag, Vector2f _position, Color _color, Shader* _shader)
 	{
-		Wall wall = Wall(_name, _position, _size, _color);
-		wallList.push_back(wall);
+		Texture* hull = nullptr;
+		Texture* gun = nullptr;
+		switch (_tankTag)
+		{
+		case Player:
+			if (_name == "Player1")
+			{
+				hull = blueTankTexture[0];
+				gun = blueTankTexture[1];
+			}
+			else if (_name == "Player2")
+			{
+				hull = brownTankTexture[0];
+				gun = brownTankTexture[1];
+			}
+			playerAliveNumber++;
+			break;
+		case Bot:
+			hull = brownTankTexture[0];
+			gun = brownTankTexture[1];
+			botAliveNumber++;
+			break;
+		default:
+			break;
+		}
+		tankList.push_back(Tank(_name, _tankTag, _position, _color, _shader, hull, gun, explosionTexture, soundBufferVec));
 	}
 
-	void	AddShell(Tank& _tank, Vector2f _position, Texture* shellTexture, vector<Texture*> explosionTexture)
+	void		AddWall(const char* _name, Vector2f _position, Vector2f _size)
 	{
-		Shell			shell = Shell(_tank.name, _tank.tankTransform.transformPoint(0, 0), shellTexture, explosionTexture);
-		shell.owner = &_tank;
-		shell.SetDirection(_position);
-		shellList.push_back(shell);
+		wallList.push_back(Wall(_name, _position, _size));
 	}
 
-	void	ClearData()
+	void		AddShell(Tank& _tank, Vector2f _targetDirection, float _time)
+	{
+		if (_tank.currentShell < _tank.maxShell && ((_time - _tank.lastShootingTime) > 0.2f || _tank.lastShootingTime == 0))
+		{
+			_tank.lastShootingTime = _time;
+			_tank.currentShell++;
+			shellList.push_back(Shell(&_tank, _targetDirection, shellTexture, explosionTexture, soundBufferVec));
+			flashList.push_back(Flash(&_tank, _targetDirection, flashTexture));
+		}
+	}
+
+	void		ResetData()
 	{
 		tankList.clear();
 		wallList.clear();
 		shellList.clear();
+		playerAliveNumber = 0;
+		botAliveNumber = 0;
 	}
 
-	void	TankManager(float time)
+	void		TankManager(float time)
 	{
 		std::vector<Tank>::iterator it = tankList.begin();
 		while (it != tankList.end())
 		{
-			if (it->name != "Player")
+			if (it->tankState == TankState::TankAlive)
 			{
-				//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
-				//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
-			}
-			for (Tank& otherTank : tankList)
-			{
-				if (it->name != otherTank.name && it->CheckIfCollideWithOtherTank(otherTank))
-					break;
+				if (it->tankTag == TankTag::Bot)
+				{
+					//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
+					//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
+				}
+				for (Tank& otherTank : tankList)
+					if (it->CheckIfCollideWithOtherTank(otherTank))
+						break;
+				for (Wall& wall : wallList)
+					if (it->CheckIfCollideWithWall(wall))
+						break;
+				it->lastTankTransform = it->tankTransform;
 			}
 			if (it->tankState == TankState::TankExplode)
 				it->DoExplosion(time);
-			if (it->tankState == TankState::Die)
+			if (it->tankState == TankState::TankDestroy)
 			{
-				printf("Tank %s destroyed \n", it->name);
-				it = tankList.erase(it);
-			}
-			else
-				++it;
-		}
-		tankList.shrink_to_fit();
-
-
-		for (Tank& tank : tankList)
-		{
-			if (tank.name != "Player")
-			{
-				//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
-				//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
-			}
-			for (Tank& otherTank : tankList)
-			{
-				if (tank.name != otherTank.name && tank.CheckIfCollideWithOtherTank(otherTank))
+				switch (it->tankTag)
+				{
+				case Player:
+					playerAliveNumber--;
 					break;
-			}
-			for (Wall& wall : wallList)
-			{
-				if (tank.CheckIfCollideWithWall(wall))
+				case Bot:
+					botAliveNumber--;
 					break;
+				default:
+					break;
+				}
+				it->tankState = TankState::TankDead;
+				break;
 			}
-			tank.lastTankTransform = tank.tankTransform;
+			++it;
 		}
 	}
 
-	void	ShellManager(float time)
+	void		ShellManager(float time)
 	{
 		std::vector<Shell>::iterator it = shellList.begin();
 		while (it != shellList.end())
 		{
-
-			if (it->shellState == ShellState::Moving)
+			if (it->shellState == ShellState::ShellMoving || it->shellState == ShellState::Shellinit)
 			{
+				it->MoveShell();
 				for (Tank& tank : tankList)
-				{
 					if (it->CheckIfCollideWithTank(tank))
 						break;
-				}
 				for (Wall& wall : wallList)
-				{
-					it->CheckIfCollideWithWall(wall);
-					if (it->shellState == ShellState::ShellExplode)
+					if (it->CheckIfCollideWithWall(wall))
 						break;
-				}
-				it->MoveShell();
+				for (Shell& otherShell : shellList)
+					if (it->CheckIfCollideWithOtherShell(otherShell))
+						break;
 			}
 			if (it->shellState == ShellState::ShellExplode)
 				it->DoExplosion(time);
-			if (it->shellState == ShellState::Destroy)
+			if (it->shellState == ShellState::ShellDestroy)
 				it = shellList.erase(it);
 			else
 				++it;
 		}
 		shellList.shrink_to_fit();
+	}
+
+	void	FlashManager(float time)
+	{
+		std::vector<Flash>::iterator it = flashList.begin();
+		while (it != flashList.end())
+		{
+			if (it->flashState == FlashState::FlashPlaying)
+				it->DoFlash(time);
+			if (it->flashState == FlashState::FlashFisnih)
+				it = flashList.erase(it);
+			else
+				++it;
+		}
+		flashList.shrink_to_fit();
+	}
+
+	InGameState	GameManager()
+	{
+		if (gameMode == GameMode::Solo)
+		{
+			if (playerAliveNumber == 0)
+				return InGameState::PlayerLoose;
+			else if (botAliveNumber == 0)
+				return InGameState::PlayerWin;
+			else
+				return InGameState::Playing;
+		}
+		else if (gameMode == GameMode::Versus)
+		{
+			if (playerAliveNumber == 0)
+				return InGameState::Draw;
+			else if (playerAliveNumber == 1)
+			{
+				if (tankList[0].tankState == TankState::TankAlive)
+					return InGameState::Player1Win;
+				else if (tankList[1].tankState == TankState::TankAlive)
+					return InGameState::Player2Win;
+			}
+			else
+				return InGameState::Playing;
+		}
 	}
 };
 

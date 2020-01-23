@@ -164,6 +164,7 @@
     <ClCompile Include="ConsoleApplication1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Flash.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Enum.h" />
