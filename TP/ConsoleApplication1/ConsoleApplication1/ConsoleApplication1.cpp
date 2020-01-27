@@ -7,6 +7,7 @@
 #include <iterator> 
 #include <string>
 #include "Game.h"
+#include "Player.h"
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
@@ -17,7 +18,7 @@ using namespace std;
 
 int						fps;
 Game					game;
-Vector2f				screenSize(800, 600);
+Vector2f				screenSize(1600, 900);
 
 static Font* font = new Font();
 static Shader* simpleShader = new Shader();
@@ -26,13 +27,16 @@ float					WallSize = 50;
 float					offSetCrosshairRange = 70;
 
 Vector2f				mouseWorldPos;
-
 GameState				gameState;
-MenuTag					menuTag;
-CustomText				titleText;
-std::vector<Button>		ButtonList;
 
-bool				isPause = false;
+vector<Texture*>		iconTextureList;
+
+bool					isPause = false;
+
+std::vector<Player>		playerList;
+int						playerIndex = 0;
+bool					ControllerAlreadyInit[9];
+bool					playerAlreadyInit[3];
 
 void		ShowDebug(RenderWindow& win, int fps)
 {
@@ -63,7 +67,7 @@ void		ShowDebug(RenderWindow& win, int fps)
 
 void		LoadShader()
 {
-	if (!Shader::isAvailable)
+	if (!Shader::isAvailable())
 		printf("No shader available\n");
 	if (!simpleShader->loadFromFile("res/simple.vert", "res/bloom.frag"))
 		printf("unable to load shaders\n");
@@ -72,29 +76,37 @@ void		LoadShader()
 void		LoadTexture()
 {
 	Texture* texture = new Texture();
+
 	if (!texture->loadFromFile("res/Shell/Light_Shell.png"))
 		printf("Unable to load shell\n");
 	else
 		game.shellTexture = texture;
-	for (int i = 0; i != 2; i++)
+
+	for (int i = 0; i <= 2; i++)
 	{
 		texture = new Texture();
-		if (!texture->loadFromFile("res/Tank/Blue/" + to_string(i) + ".png"))
-			printf("Unable to load blue %d\n", i);
+		if (!texture->loadFromFile("res/Misc/" + to_string(i) + ".png"))
+			printf("Unable to load misc %d\n", i);
 		else
-			game.blueTankTexture.push_back(texture);
+			iconTextureList.push_back(texture);
 	}
 
-	for (int i = 0; i != 2; i++)
+	for (int i = 0; i <= 3; i++)
 	{
 		texture = new Texture();
-		if (!texture->loadFromFile("res/Tank/Brown/" + to_string(i) + ".png"))
-			printf("Unable to load brown %d\n", i);
+		if (!texture->loadFromFile("res/Tank/" + to_string(i) + "-0.png"))
+			printf("Unable to load tank '%d-0'\n", i);
 		else
-			game.brownTankTexture.push_back(texture);
+			game.tankTexture.push_back(texture);
+
+		texture = new Texture();
+		if (!texture->loadFromFile("res/Tank/" + to_string(i) + "-1.png"))
+			printf("Unable to load hull '%d-0'\n", i);
+		else
+			game.tankTexture.push_back(texture);
 	}
 
-	for (int i = 0; i != 9; i++)
+	for (int i = 0; i <= 8; i++)
 	{
 		texture = new Texture();
 		if (!texture->loadFromFile("res/Explosion/" + to_string(i) + ".png"))
@@ -103,7 +115,7 @@ void		LoadTexture()
 			game.explosionTexture.push_back(texture);
 	}
 
-	for (int i = 0; i != 4; i++)
+	for (int i = 0; i <= 3; i++)
 	{
 		texture = new Texture();
 		if (!texture->loadFromFile("res/Flash/" + to_string(i) + ".png"))
@@ -129,145 +141,6 @@ void		LoadSound()
 		game.soundBufferVec.push_back(soundBuffer);
 }
 
-void		InitMenu()
-{
-	if (menuTag == MenuTag::MainMenu)
-	{
-		Button singlePlayerButton = Button(470, 70, String("Single Player"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 3), Color::Black, font, Color::Green, MenuTag::SinglePlayerMenu);
-		ButtonList.push_back(singlePlayerButton);
-		Button MultiPlayerButton = Button(470, 70, String("Versus"), Vector2f(screenSize.x - screenSize.x / 1.3, screenSize.y / 2), Color::Black, font, Color::Green, MenuTag::MultiPlayerMenu);
-		ButtonList.push_back(MultiPlayerButton);
-	}
-	else
-	{
-		Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuTag::MainMenu);
-		ButtonList.push_back(quitButton);
-		Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, MenuTag::Reload);
-		ButtonList.push_back(retryButton);
-	}
-	switch (menuTag)
-	{
-	case MainMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("MainMenu"));
-		break;
-	case SinglePlayerMenu:
-		break;
-	case MultiPlayerMenu:
-		break;
-	case InGameMenu:
-		break;
-	case PauseMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Pause"));
-		break;
-	case WinMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Win"));
-		break;
-	case LooseMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Loose"));
-		break;
-	case Player1WinMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Player 1 win !"));
-		break;
-	case Player2WinMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Player 2 win !"));
-		break;
-	case DrawMenu:
-		titleText = CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 2), Color::Black, String("Draw !"));
-		break;
-	case Reload:
-		break;
-	case Null:
-		break;
-	default:
-		break;
-	}
-}
-
-void		DrawUI(RenderWindow& win)
-{
-	win.draw(titleText);
-	for (Button& button : ButtonList)
-		button.DrawButton(win);
-}
-
-void		CheckButton()
-{
-	for (Button& button : ButtonList)
-	{
-		if (button.CheckButton(mouseWorldPos))
-		{
-			menuTag = button.state;
-			ButtonList.clear();
-			switch (menuTag)
-			{
-			case MainMenu:
-				gameState = GameState::Start;
-				game.ResetData();
-				break;
-			case SinglePlayerMenu:
-				game.gameMode = GameMode::Solo;
-				gameState = GameState::Loading;
-				break;
-			case MultiPlayerMenu:
-				game.gameMode = GameMode::Versus;
-				gameState = GameState::Loading;
-				break;
-			case InGameMenu:
-				break;
-			case PauseMenu:
-				break;
-			case WinMenu:
-				break;
-			case LooseMenu:
-				break;
-			case Reload:
-				game.ResetData();
-				gameState = GameState::Loading;
-				break;
-			case Null:
-				break;
-			default:
-				break;
-			}
-		}
-
-	}
-}
-
-void		DrawCrosshair(RenderWindow& win)
-{
-	Vector2f	tankPosition = game.tankList[0].hull.getPosition();
-	float		xDistance = tankPosition.x - mouseWorldPos.x;
-	float		yDistance = tankPosition.y - mouseWorldPos.y;
-	float		Distance = sqrt(xDistance * xDistance + yDistance * yDistance);
-
-	float		xDirection = -xDistance / Distance;
-	float		yDirection = -yDistance / Distance;
-
-	CircleShape		dot(5);
-	RectangleShape	HorCross(Vector2f(10, 2));
-	RectangleShape	VerCross(Vector2f(2, 10));
-
-	HorCross.setOrigin(10 / 2, 2 / 2);
-	HorCross.setFillColor(Color::Red);
-	HorCross.setPosition(mouseWorldPos);
-
-	VerCross.setOrigin(2 / 2, 10 / 2);
-	VerCross.setFillColor(Color::Red);
-	VerCross.setPosition(mouseWorldPos);
-
-	dot.setOrigin(5, 5);
-	dot.setFillColor(Color::Transparent);
-	dot.setOutlineThickness(1);
-	dot.setOutlineColor(Color::Red);
-	dot.setPosition(mouseWorldPos);
-
-	game.tankList[0].SetGunAngle(mouseWorldPos);
-	win.draw(dot);
-	win.draw(HorCross);
-	win.draw(VerCross);
-}
-
 void		LoadMap()
 {
 	game.AddWall("WallMapUP", Vector2f(0, 0), Vector2f(screenSize.x, WallSize));
@@ -281,21 +154,86 @@ void		LoadMap()
 		game.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
 		game.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
 		game.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
-		game.AddTank("Player1", TankTag::Player, Vector2f(screenSize.x / 2, 500), Color::Blue, simpleShader);
-		game.AddTank("Bot 1", TankTag::Bot, Vector2f(300, 100), Color::Red, simpleShader);
-		game.AddTank("Bot 2", TankTag::Bot, Vector2f(500, 100), Color::Red, simpleShader);
+		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 3, 500), simpleShader);
+		game.AddTank("Bot 1", TankTag::BotTank, Vector2f(300, 100), simpleShader);
+		game.AddTank("Bot 2", TankTag::BotTank, Vector2f(500, 100), simpleShader);
 		break;
 	case GameMode::Versus:
-		game.AddTank("Player1", TankTag::Player, Vector2f(screenSize.x / 9, 500), Color::Blue, simpleShader);
-		game.AddTank("Player2", TankTag::Player, Vector2f(screenSize.x - 100, 100), Color::Red, simpleShader);
+
+		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 9, 500), simpleShader);
+		game.AddTank("Player 2", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 100), simpleShader);
+		if (playerList.size() >= 3)
+			game.AddTank("Player 3", TankTag::PlayerTank, Vector2f(100, 100), simpleShader);
+		if (playerList.size() >= 4)
+			game.AddTank("Player 4", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 500), simpleShader);
 		break;
 	default:
 		break;
 	}
-
 }
 
-void		World(RenderWindow& win, float time)
+int			CheckNumberOfGamepadConnected()
+{
+	int nb = 0;
+	for (int i = 0; i != 8; i++)
+		if (sf::Joystick::isConnected(i))
+			nb++;
+	return nb;
+}
+
+void		PlayerControllerInit(UI* ui)
+{
+	for (int i = 0; i != 8; i++)
+	{
+		if (Joystick::isConnected(i))
+		{
+			if (Joystick::isButtonPressed(i, 7) && ControllerAlreadyInit[i] == false)
+			{
+				if (playerAlreadyInit[playerIndex] == false)
+				{
+					playerList.push_back(Player(&game, PlayerController::GamePad, &mouseWorldPos, i));
+					playerAlreadyInit[playerIndex] = true;
+					ui->AddControllerIcon(iconTextureList[1], playerIndex,i);
+					ControllerAlreadyInit[i] = true;
+					playerIndex++;
+				}
+			}
+		}
+	}
+
+	if (Keyboard::isKeyPressed(Keyboard::Space))
+	{
+		for (int i = 0; i <= 3; i++)
+		{
+			if (playerAlreadyInit[i] == false)//&& ControllerAlreadyInit[9] == false
+			{
+				playerList.push_back(Player(&game, PlayerController::Keyboard, &mouseWorldPos));
+				playerAlreadyInit[playerIndex] = true;
+				ui->AddControllerIcon(iconTextureList[0], playerIndex);
+				ControllerAlreadyInit[9] = true;
+				playerIndex++;
+			}
+		}
+	}
+}
+
+void		SetPlayerControllerData()
+{
+	for (int i = 0; i < playerIndex; i++)
+	{
+		playerList[i].SetTankToPlayer(&game.tankList[i]);
+	}
+}
+
+void		ResetPlayerController()
+{
+	playerIndex = 0;
+	for (int i = 0; i < 3; i++)
+		playerAlreadyInit[i] = false;
+	playerList.clear();
+}
+
+void		World(RenderWindow& win, UI& ui, float time)
 {
 	if (gameState == GameState::InGame)
 	{
@@ -305,27 +243,25 @@ void		World(RenderWindow& win, float time)
 		switch (game.GameManager())
 		{
 		case InGameState::PlayerWin:
-			gameState = GameState::End;
-			menuTag = MenuTag::WinMenu;
+			gameState = GameState::GameEnd;
+			ui.screen = Screen::WinMenu;
 			break;
 		case InGameState::PlayerLoose:
-			gameState = GameState::End;
-			menuTag = MenuTag::LooseMenu;
+			gameState = GameState::GameEnd;
+			ui.screen = Screen::LooseMenu;
 			break;
-		case InGameState::Player1Win:
-			gameState = GameState::End;
-			menuTag = MenuTag::Player1WinMenu;
-			break;
-		case InGameState::Player2Win:
-			gameState = GameState::End;
-			menuTag = MenuTag::Player2WinMenu;
+		case InGameState::VersusEnd:
+			gameState = GameState::GameEnd;
+			ui.screen = Screen::StartButton;
 			break;
 		case InGameState::Draw:
-			gameState = GameState::End;
-			menuTag = MenuTag::DrawMenu;
+			gameState = GameState::GameEnd;
+			ui.screen = Screen::DrawMenu;
 			break;
 		case InGameState::Playing:
-			DrawCrosshair(win);
+			for (Player& player : playerList)
+				if (player.playerController == PlayerController::Keyboard)
+					player.DrawCrosshair(win);
 			break;
 		default:
 			break;
@@ -333,42 +269,7 @@ void		World(RenderWindow& win, float time)
 	}
 }
 
-void		CheckGameState(Event event)
-{
-	switch (gameState)
-	{
-	case Menu:
-		break;
-	case InGame:
-		if (event.key.code == Keyboard::Space)
-		{
-			isPause = true;
-			gameState = GameState::Pause;
-			menuTag = MenuTag::PauseMenu;
-			InitMenu();
-		}
-		else if (event.type == Event::LostFocus)
-		{
-			isPause = true;
-			gameState = GameState::Pause;
-			menuTag = MenuTag::PauseMenu;
-			InitMenu();
-		}
-		break;
-	case Pause:
-		if (event.key.code == Keyboard::Space)
-		{
-			isPause = true;
-			gameState = GameState::InGame;
-			ButtonList.clear();
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-int	main()
+int			main()
 {
 	ContextSettings		settings;
 	RenderWindow		window(VideoMode(screenSize.x, screenSize.y), "World of tank low cost");
@@ -388,76 +289,96 @@ int	main()
 	LoadTexture();
 	LoadSound();
 	gameState = GameState::Start;
-	menuTag = MenuTag::MainMenu;
+
+	UI			ui(font, screenSize, iconTextureList);
 
 	while (window.isOpen())
 	{
 		window.clear(Color(212, 192, 171, 255));
 		frameStart = clock.getElapsedTime();
 		fps = 1.0f / (frameStart - lastFrame).asSeconds();
+		mouseWorldPos = window.mapPixelToCoords(Mouse::getPosition(window));
 
 		Event event;
 		while (window.pollEvent(event))
 		{
+			if (event.type == Event::LostFocus && gameState == GameState::InGame)
+			{
+				isPause = true;
+				gameState = GameState::Pause;
+				ui.screen = Screen::PauseMenu;
+				ui.InitMenu();
+			}
 			if (event.type == Event::KeyPressed)
 			{
-				CheckGameState(event);
-			}
-			if (event.type == Event::MouseButtonPressed)
-			{
-				if (event.mouseButton.button == Mouse::Left)
+				switch (gameState)
 				{
-					//CircleShape mouseClick(5);
-					//mouseClick.setOrigin(Vector2f(mouseClick.getRadius(), mouseClick.getRadius()));
-					//mouseClick.setPosition(mouseWorldPos);
-					CheckButton();
+				case Menu:
+					break;
+				case InGame:
+					if (event.key.code == Keyboard::Space)
+					{
+						isPause = true;
+						gameState = GameState::Pause;
+						ui.screen = Screen::PauseMenu;
+						ui.InitMenu();
+					}
+					break;
+				case Pause:
+					if (event.key.code == Keyboard::Space)
+					{
+						isPause = true;
+						gameState = GameState::InGame;
+						ui.FreeUIData();
+					}
+					break;
+				default:
+					break;
 				}
 			}
+			if (event.type == Event::MouseButtonPressed)
+				if (gameState == GameState::Menu || gameState == GameState::GameEnd || gameState == GameState::Pause)
+					if (event.mouseButton.button == Mouse::Left)
+						ui.CheckButton(game, gameState, mouseWorldPos);
 			if (event.type == Event::Closed)
 				window.close();
 		}
 
-		mouseWorldPos = window.mapPixelToCoords(Mouse::getPosition(window));
-
 		switch (gameState)
 		{
 		case Start:
-			InitMenu();
+			ResetPlayerController();
+			ui.InitMenu();
 			gameState = GameState::Menu;
 			break;
 		case Menu:
-			DrawUI(window);
+			if (ui.screen == Screen::MultiPlayerMenu)
+				PlayerControllerInit(&ui);
+			ui.Draw(window);
 			break;
 		case Loading:
 			LoadMap();
+			SetPlayerControllerData();
 			gameState = GameState::Pause;
-			menuTag = MenuTag::PauseMenu;
+			ui.screen = Screen::PauseMenu;
 			break;
 		case InGame:
 			if (isMouseCursorIsVisible == true) { isMouseCursorIsVisible = false; window.setMouseCursorVisible(false); }
-			if (Keyboard::isKeyPressed(Keyboard::Right))game.tankList[0].MoveTank(MoveDirection::Right);
-			if (Keyboard::isKeyPressed(Keyboard::Left))game.tankList[0].MoveTank(MoveDirection::Left);
-			if (Keyboard::isKeyPressed(Keyboard::Up))game.tankList[0].MoveTank(MoveDirection::Up);
-			if (Keyboard::isKeyPressed(Keyboard::Down))game.tankList[0].MoveTank(MoveDirection::Down);
-			if (Mouse::isButtonPressed(Mouse::Left))
-			{
-				game.AddShell(game.tankList[0], mouseWorldPos, frameStart.asSeconds());
-				//game.AddShell(game.tankList[1], mouseWorldPos, lightShell, explosionTexture, frameStart.asSeconds());
-			}
-
+			for (Player& player : playerList)
+				player.Update(frameStart.asSeconds());
 			game.DrawElement(window);
-			World(window, frameStart.asSeconds());
+			World(window, ui, frameStart.asSeconds());
 			break;
 		case Pause:
-			InitMenu();
+			ui.InitMenu();
 			game.DrawElement(window);
-			DrawUI(window);
+			ui.Draw(window);
 			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
 			break;
-		case End:
-			InitMenu();
+		case GameEnd:
+			ui.InitMenu(game.nameVersusWinner);
 			game.DrawElement(window);
-			DrawUI(window);
+			ui.Draw(window);
 			if (isMouseCursorIsVisible == false) { isMouseCursorIsVisible = true; window.setMouseCursorVisible(true); }
 			break;
 		default:

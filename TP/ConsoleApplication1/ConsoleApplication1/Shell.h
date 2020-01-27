@@ -19,7 +19,7 @@ private:
 	float					xDirection = 0;
 	float					yDirection = 0;
 	float					offSetSpeed = 5;
-	int						maxHit = 0;
+	int						maxHit = 3;
 	int						currenthit = 0;
 	Sound					shellSound;
 	vector<Texture*>		explosionTexture;
@@ -35,7 +35,7 @@ public:
 		owner = _ownerTank;
 		shell.setTexture(*_shellTexture);
 		shell.setOrigin(_shellTexture->getSize().x / 2, _shellTexture->getSize().y / 2);
-		shell.setPosition(owner->tankTransform.transformPoint(0, 0));
+		shell.setPosition(owner->GetTransformPosition());
 		SetDirection(_targetDirection);
 		explosionTexture = _explosionTexture;
 		soundBufferVec = _soundBufferVec;
@@ -62,11 +62,14 @@ public:
 		{
 			if (&tank == owner && shellState == ShellState::Shellinit)
 				return false;
-			tank.tankState = TankState::TankExplode;
-			printf("%s has destroy !\n", tank.name);
-			shellState = ShellState::ShellExplode;
-			owner->currentShell--;
-			return true;
+			if (tank.tankState == TankState::TankAlive)
+			{
+				tank.tankState = TankState::TankExplode;
+				printf("%s has destroy !\n", tank.name);
+				shellState = ShellState::ShellExplode;
+				owner->currentShell--;
+				return true;
+			}	
 		}
 		return false;
 	}
@@ -176,6 +179,7 @@ public:
 				shell.setTextureRect(IntRect(0,0,0,0));
 			else if ((Currenttime - lastExplosionTime) > 0.02f)
 			{
+				delete(&shellSound);
 				shellState = ShellState::ShellDestroy;
 			}
 				

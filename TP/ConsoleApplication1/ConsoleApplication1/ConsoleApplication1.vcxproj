@@ -165,6 +165,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Flash.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Enum.h" />

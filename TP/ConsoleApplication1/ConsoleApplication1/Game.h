@@ -2,7 +2,6 @@
 #include <list>
 #include <vector>
 #include <SFML/Audio.hpp>
-#include "UI.h"
 #include "Tank.h"
 #include "Wall.h"
 #include "Shell.h"
@@ -15,22 +14,27 @@ class Game
 private:
 	int							playerAliveNumber = 0;
 	int							botAliveNumber = 0;
+	int							indexTexture = 0;
 
+
+	
 public:
 	std::vector<Tank>			tankList;
 	std::vector<Wall>			wallList;
 	std::vector<Shell>			shellList;
 	std::vector<Flash>			flashList;
+
 	std::vector<CircleShape>	mouseEffectList;
 
 	Texture*					shellTexture;
-	vector<Texture*>			blueTankTexture;
-	vector<Texture*>			brownTankTexture;
+	vector<Texture*>			tankTexture;
 	vector<Texture*>			explosionTexture;
 	vector<Texture*>			flashTexture;
 	vector<SoundBuffer*>		soundBufferVec;
 
 	GameMode					gameMode;
+
+	std::string					nameVersusWinner;
 
 	void		DrawElement(RenderWindow& win)
 	{
@@ -45,34 +49,27 @@ public:
 			win.draw(flash.flash);
 	}
 
-	void		AddTank(const char* _name, TankTag _tankTag, Vector2f _position, Color _color, Shader* _shader)
+	void		AddTank(const char* _name, TankTag _tankTag, Vector2f _position, Shader* _shader)
 	{
 		Texture* hull = nullptr;
 		Texture* gun = nullptr;
+
+		
 		switch (_tankTag)
 		{
-		case Player:
-			if (_name == "Player1")
-			{
-				hull = blueTankTexture[0];
-				gun = blueTankTexture[1];
-			}
-			else if (_name == "Player2")
-			{
-				hull = brownTankTexture[0];
-				gun = brownTankTexture[1];
-			}
-			playerAliveNumber++;
+		case PlayerTank:
+			hull = tankTexture[playerAliveNumber + indexTexture];
+			gun = tankTexture[++playerAliveNumber + indexTexture++];
 			break;
-		case Bot:
-			hull = brownTankTexture[0];
-			gun = brownTankTexture[1];
+		case BotTank:
+			hull = tankTexture[2];
+			gun = tankTexture[3];
 			botAliveNumber++;
 			break;
 		default:
 			break;
 		}
-		tankList.push_back(Tank(_name, _tankTag, _position, _color, _shader, hull, gun, explosionTexture, soundBufferVec));
+		tankList.push_back(Tank(_name, _tankTag, _position, _shader, hull, gun, explosionTexture, soundBufferVec));
 	}
 
 	void		AddWall(const char* _name, Vector2f _position, Vector2f _size)
@@ -82,7 +79,7 @@ public:
 
 	void		AddShell(Tank& _tank, Vector2f _targetDirection, float _time)
 	{
-		if (_tank.currentShell < _tank.maxShell && ((_time - _tank.lastShootingTime) > 0.2f || _tank.lastShootingTime == 0))
+		if (_tank.currentShell < _tank.maxShell && ((_time - _tank.lastShootingTime) > 0.1f || _tank.lastShootingTime == 0))
 		{
 			_tank.lastShootingTime = _time;
 			_tank.currentShell++;
@@ -98,6 +95,7 @@ public:
 		shellList.clear();
 		playerAliveNumber = 0;
 		botAliveNumber = 0;
+		indexTexture = 0;
 	}
 
 	void		TankManager(float time)
@@ -107,7 +105,7 @@ public:
 		{
 			if (it->tankState == TankState::TankAlive)
 			{
-				if (it->tankTag == TankTag::Bot)
+				if (it->tankTag == TankTag::BotTank)
 				{
 					//tank.SetGunAngle(_data.tankList[0].rectangleTank.getPosition());
 					//AddShell(tank, _data.tankList[0].rectangleTank.getPosition(), time);
@@ -126,10 +124,10 @@ public:
 			{
 				switch (it->tankTag)
 				{
-				case Player:
+				case PlayerTank:
 					playerAliveNumber--;
 					break;
-				case Bot:
+				case BotTank:
 					botAliveNumber--;
 					break;
 				default:
@@ -170,7 +168,7 @@ public:
 		shellList.shrink_to_fit();
 	}
 
-	void	FlashManager(float time)
+	void		FlashManager(float time)
 	{
 		std::vector<Flash>::iterator it = flashList.begin();
 		while (it != flashList.end())
@@ -202,10 +200,14 @@ public:
 				return InGameState::Draw;
 			else if (playerAliveNumber == 1)
 			{
-				if (tankList[0].tankState == TankState::TankAlive)
-					return InGameState::Player1Win;
-				else if (tankList[1].tankState == TankState::TankAlive)
-					return InGameState::Player2Win;
+				for (Tank& tank : tankList)
+				{
+					if (tank.tankState == TankState::TankAlive)
+					{
+						nameVersusWinner = tank.name;
+						return InGameState::VersusEnd;
+					}
+				}
 			}
 			else
 				return InGameState::Playing;

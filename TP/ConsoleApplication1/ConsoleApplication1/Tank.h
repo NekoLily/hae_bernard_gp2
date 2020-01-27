@@ -17,9 +17,10 @@ private:
 	vector<Texture*>		explosionTexture;
 	vector<SoundBuffer*>	soundBufferVec;
 	Sound					tankSound;
-	int			currentExplosion = 0;
-	float		lastExplosionTime = 0;
-	float		tankSpeed = 2;
+	int						currentExplosion = 0;
+	float					lastExplosionTime = 0;
+	float					tankSpeed = 2;
+	MoveDirection			lastState;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const
 	{
@@ -46,10 +47,10 @@ public:
 	TankTag			tankTag;
 
 	int				currentShell = 0;
-	int				maxShell = 3;
+	int				maxShell = 9999;
 	float			lastShootingTime = 0;
 
-	Tank(const char* _name, TankTag _tankTag, Vector2f _pos, Color _color, Shader* _shader, Texture* _hull, Texture* _gun, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
+	Tank(const char* _name, TankTag _tankTag, Vector2f _pos, Shader* _shader, Texture* _hull, Texture* _gun, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
 	{
 		tankTransform = Transform::Identity;
 		tankTransform.translate(_pos);
@@ -85,16 +86,27 @@ public:
 			case Up:
 			{
 				tankTransform.translate(0, -1 * tankSpeed);
+				lastState = Up;
 				break;
 			}
-			case Left:
-				tankTransform.rotate(-1);
+			case RotateLeft:
+				if (lastState == Up || lastState == Idle)
+					tankTransform.rotate(-1);
+				else if (lastState == Down)
+					tankTransform.rotate(1);
 				break;
-			case Right:
-				tankTransform.rotate(1);
+			case RotateRight:
+				if (lastState == Up || lastState == Idle)
+					tankTransform.rotate(1);
+				else if (lastState == Down)
+					tankTransform.rotate(-1);
 				break;
 			case Down:
 				tankTransform.translate(0, 1 * tankSpeed);
+				lastState = Down;
+				break;
+			case Idle:
+				lastState = Idle;
 				break;
 			default:
 				break;
@@ -106,6 +118,11 @@ public:
 	FloatRect	GetTankGlobalBounds()
 	{
 		return tankTransform.transformRect(hull.getGlobalBounds());
+	}
+
+	Vector2f	GetTransformPosition()
+	{
+		return (tankTransform.transformPoint(0, 0));
 	}
 
 	bool		CheckIfCollideWithWall(Wall& wall)
