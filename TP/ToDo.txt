@@ -1,0 +1,9 @@
+Fix Solo mode
+Add Quit Button
+Add Start + gamepad move menu
+Add Level design
+Add (BGM Menu + InGame)
+Add Feedback (Tank Move / Player Position)
+Add sound fx feedback for shell init
+Add shader
+remove button couleur box

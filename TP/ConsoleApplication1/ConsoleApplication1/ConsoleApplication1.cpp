@@ -285,12 +285,12 @@ int			main()
 	window.setMouseCursorVisible(true);
 	window.setVerticalSyncEnabled(true);
 
-	font->loadFromFile("C:\\Windows\\Fonts\\arial.ttf");
+	font->loadFromFile("res/font.ttf");
 	LoadTexture();
 	LoadSound();
 	gameState = GameState::Start;
 
-	UI			ui(font, screenSize, iconTextureList);
+	UI			ui(font, screenSize, iconTextureList, game.tankTexture);
 
 	while (window.isOpen())
 	{

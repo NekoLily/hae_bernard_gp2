@@ -69,11 +69,12 @@ class UI
 public:
 	Screen					screen;
 
-	UI(Font* _font, Vector2f _screenSize, vector<Texture*> _iconTextureList)
+	UI(Font* _font, Vector2f _screenSize, vector<Texture*> _iconTextureList, vector<Texture*> _tankTextureList)
 	{
 		font = _font;
 		screenSize = _screenSize;
 		iconTextureList = _iconTextureList;
+		tankTextureList = _tankTextureList;
 		screen = Screen::MainMenu;
 	};
 
@@ -112,14 +113,7 @@ public:
 		{
 			text = new  CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("Versus Menu"));
 			textList.push_back(text);
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 1"));
-			textList.push_back(text);
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 4), Color::Black, String("Player 2"));
-			textList.push_back(text);
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 4), Color::Black, String("Player 3"));
-			textList.push_back(text);
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 4"));
-			textList.push_back(text);
+			
 			text = new CustomText(50, font, Vector2f(screenSize.x / 2, screenSize.y - screenSize.y / 10), Color::Black, String("Press start or space to join"));
 			textList.push_back(text);
 		}
@@ -156,37 +150,87 @@ public:
 	void		AddControllerIcon(Texture* iconTexture, int indexPlayer, int id = -1)
 	{
 		Sprite* spr = new Sprite();
+		Sprite* sprHull = new Sprite();
+		Sprite* sprGun = new Sprite();
+		CustomText* text = nullptr;
+
 		switch (indexPlayer)
 		{
 		case 0:
-			spr->setScale(0.15, 0.15);
-			spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4 + screenSize.y / 15));
+			spr->setScale(0.25, 0.25);
+			spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4 + screenSize.y / 10));
 			spr->setTexture(*iconTexture);
 			spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+
+			sprHull->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+			sprHull->setTexture(*tankTextureList[0]);
+			sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
+
+			sprGun->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+			sprGun->setTexture(*tankTextureList[1]);
+			sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 1"));
+			textList.push_back(text);
 			break;
 		case 1:
-			spr->setScale(0.15, 0.15);
-			spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 4 + screenSize.y / 15));
+			spr->setScale(0.25, 0.25);
+			spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 4 + screenSize.y / 10));
 			spr->setTexture(*iconTexture);
 			spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+
+			sprHull->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 2 + screenSize.y / 10));
+			sprHull->setTexture(*tankTextureList[2]);
+			sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
+
+			sprGun->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 2 + screenSize.y / 10));
+			sprGun->setTexture(*tankTextureList[3]);
+			sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 10, screenSize.y / 4), Color::Black, String("Player 2"));
+			textList.push_back(text);
 			break;
 		case 2:
-			spr->setScale(0.15, 0.15);
-			spr->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 4 + screenSize.y / 15));
+			spr->setScale(0.25, 0.25);
+			spr->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 4 + screenSize.y / 10));
 			spr->setTexture(*iconTexture);
 			spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+
+			sprHull->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 2 + screenSize.y / 10));
+			sprHull->setTexture(*tankTextureList[4]);
+			sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
+
+			sprGun->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 2 + screenSize.y / 10));
+			sprGun->setTexture(*tankTextureList[5]);
+			sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2 + screenSize.x / 10, screenSize.y / 4), Color::Black, String("Player 3"));
+			textList.push_back(text);
 			break;
 		case 3:
-			spr->setScale(0.15, 0.15);
-			spr->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 4+ screenSize.y / 15));
+			spr->setScale(0.25, 0.25);
+			spr->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 4+ screenSize.y / 10));
 			spr->setTexture(*iconTexture);
 			spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+
+			sprHull->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+			sprHull->setTexture(*tankTextureList[6]);
+			sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
+
+			sprGun->setPosition(Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+			sprGun->setTexture(*tankTextureList[7]);
+			sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2 + screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 4"));
+			textList.push_back(text);
 			break;
 		default:
 			break;
 		}
 		
-		iconSpriteList.push_back(spr);
+		spriteList.push_back(spr);
+		spriteList.push_back(sprHull);
+		spriteList.push_back(sprGun);
 		if (id != -1)
 		{
 			CustomText* text = new  CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 3 + screenSize.x / 20, screenSize.y / 4 + screenSize.y / 15), Color::Black, String("n°" + to_string(id + 1)));
@@ -200,7 +244,7 @@ public:
 			win.draw(*text);
 		for (Button& button : buttonList)
 			button.DrawButton(win);
-		for (Sprite* sprite : iconSpriteList)
+		for (Sprite* sprite : spriteList)
 			win.draw(*sprite);
 	}
 
@@ -244,11 +288,11 @@ public:
 	{
 		for (vector<CustomText*>::iterator it = textList.begin(); it != textList.end(); ++it)
 			delete* it;
-		for (vector<Sprite*>::iterator it = iconSpriteList.begin(); it != iconSpriteList.end(); ++it)
+		for (vector<Sprite*>::iterator it = spriteList.begin(); it != spriteList.end(); ++it)
 			delete* it;
 		textList.clear();
 		buttonList.clear();
-		iconSpriteList.clear();
+		spriteList.clear();
 	}
 
 private:
@@ -256,7 +300,8 @@ private:
 	Vector2f				screenSize;
 
 	vector<Texture*>		iconTextureList;
+	vector<Texture*>		tankTextureList;
 	vector<CustomText*>		textList;
 	vector<Button>			buttonList;
-	vector<Sprite*>			iconSpriteList;
+	vector<Sprite*>			spriteList;
 };
