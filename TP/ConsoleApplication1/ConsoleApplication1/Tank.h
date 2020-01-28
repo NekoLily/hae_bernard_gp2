@@ -47,13 +47,14 @@ public:
 	TankTag			tankTag;
 
 	int				currentShell = 0;
-	int				maxShell = 9999;
+	int				maxShell = 3;
 	float			lastShootingTime = 0;
 
-	Tank(const char* _name, TankTag _tankTag, Vector2f _pos, Shader* _shader, Texture* _hull, Texture* _gun, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
+	Tank(const char* _name, TankTag _tankTag, Vector2f _pos,  Texture* _hull, Texture* _gun, float _startRotation, vector<Texture*> _explosionTexture, vector<SoundBuffer*> _soundBufferVec)
 	{
 		tankTransform = Transform::Identity;
 		tankTransform.translate(_pos);
+		tankTransform.rotate(_startRotation);
 		name = _name;
 		tankTag = _tankTag;
 
@@ -65,7 +66,6 @@ public:
 		gun.setOrigin(Vector2f(hull.getSize().x / 2 + 20, 170));
 		gun.scale(0.3, 0.3);
 		SetGunOnHull();
-		shaderptr = _shader;
 		explosionTexture = _explosionTexture;
 		soundBufferVec = _soundBufferVec;
 

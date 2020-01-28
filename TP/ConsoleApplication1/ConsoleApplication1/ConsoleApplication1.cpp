@@ -35,6 +35,7 @@ bool					isPause = false;
 
 std::vector<Player>		playerList;
 int						playerIndex = 0;
+bool					keyboardAlreadyInit = false;
 bool					ControllerAlreadyInit[9];
 bool					playerAlreadyInit[3];
 
@@ -139,6 +140,17 @@ void		LoadSound()
 		printf("unable to load ExplosionShell\n");
 	else
 		game.soundBufferVec.push_back(soundBuffer);
+
+	soundBuffer = new SoundBuffer();
+	if (!soundBuffer->loadFromFile("res/Audio/ExplosionShell.wav"))
+		printf("unable to load ExplosionShell\n");
+	else
+		game.soundBufferVec.push_back(soundBuffer);
+	soundBuffer = new SoundBuffer();
+	if (!soundBuffer->loadFromFile("res/Audio/ShellShoot.wav"))
+		printf("unable to load ShellShoot\n");
+	else
+		game.soundBufferVec.push_back(soundBuffer);
 }
 
 void		LoadMap()
@@ -154,18 +166,18 @@ void		LoadMap()
 		game.AddWall("Obstacle verticale", Vector2f(screenSize.x / 2, screenSize.y / 2), Vector2f(50, 100));
 		game.AddWall("Obstacle horizontale", Vector2f(screenSize.x / 2 - 100, screenSize.y / 2 + 100), Vector2f(150, 50));
 		game.AddWall("Obstacle carre", Vector2f(screenSize.x / 2 + 200, screenSize.y / 2), Vector2f(50, 50));
-		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 3, 500), simpleShader);
-		game.AddTank("Bot 1", TankTag::BotTank, Vector2f(300, 100), simpleShader);
-		game.AddTank("Bot 2", TankTag::BotTank, Vector2f(500, 100), simpleShader);
+		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 3, 500), 0);
+		game.AddTank("Bot 1", TankTag::BotTank, Vector2f(300, 100), 180);
+		game.AddTank("Bot 2", TankTag::BotTank, Vector2f(500, 100), 180);
 		break;
 	case GameMode::Versus:
 
-		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 9, 500), simpleShader);
-		game.AddTank("Player 2", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 100), simpleShader);
+		game.AddTank("Player 1", TankTag::PlayerTank, Vector2f(screenSize.x / 9, 500), 0);
+		game.AddTank("Player 2", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 100), 180);
 		if (playerList.size() >= 3)
-			game.AddTank("Player 3", TankTag::PlayerTank, Vector2f(100, 100), simpleShader);
+			game.AddTank("Player 3", TankTag::PlayerTank, Vector2f(100, 100), 180);
 		if (playerList.size() >= 4)
-			game.AddTank("Player 4", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 500), simpleShader);
+			game.AddTank("Player 4", TankTag::PlayerTank, Vector2f(screenSize.x - 100, 500), 0);
 		break;
 	default:
 		break;
@@ -181,7 +193,7 @@ int			CheckNumberOfGamepadConnected()
 	return nb;
 }
 
-void		PlayerControllerInit(UI* ui)
+void		PlayerControllerInit(UI* ui, int maxPlayer)
 {
 	for (int i = 0; i != 8; i++)
 	{
@@ -189,11 +201,11 @@ void		PlayerControllerInit(UI* ui)
 		{
 			if (Joystick::isButtonPressed(i, 7) && ControllerAlreadyInit[i] == false)
 			{
-				if (playerAlreadyInit[playerIndex] == false)
+				if (playerAlreadyInit[playerIndex] == false && playerIndex < maxPlayer)
 				{
 					playerList.push_back(Player(&game, PlayerController::GamePad, &mouseWorldPos, i));
 					playerAlreadyInit[playerIndex] = true;
-					ui->AddControllerIcon(iconTextureList[1], playerIndex,i);
+					ui->AddControllerIcon(iconTextureList[1], playerIndex, game.gameMode, i);
 					ControllerAlreadyInit[i] = true;
 					playerIndex++;
 				}
@@ -201,20 +213,29 @@ void		PlayerControllerInit(UI* ui)
 		}
 	}
 
-	if (Keyboard::isKeyPressed(Keyboard::Space))
+	if (ControllerAlreadyInit[8] == false && Keyboard::isKeyPressed(Keyboard::Space))
 	{
+		int nb = 0;
 		for (int i = 0; i <= 3; i++)
 		{
-			if (playerAlreadyInit[i] == false)//&& ControllerAlreadyInit[9] == false
-			{
-				playerList.push_back(Player(&game, PlayerController::Keyboard, &mouseWorldPos));
-				playerAlreadyInit[playerIndex] = true;
-				ui->AddControllerIcon(iconTextureList[0], playerIndex);
-				ControllerAlreadyInit[9] = true;
-				playerIndex++;
-			}
+			if (playerAlreadyInit[i] == true)
+				nb++;
 		}
+		if (playerAlreadyInit[nb] == false && playerIndex < maxPlayer)
+		{
+			playerList.push_back(Player(&game, PlayerController::Keyboard, &mouseWorldPos));
+			ui->AddControllerIcon(iconTextureList[0], playerIndex, game.gameMode);
+			playerAlreadyInit[playerIndex] = true;
+			ControllerAlreadyInit[8] = true;
+			playerIndex++;
+		}
+
 	}
+
+	if (game.gameMode == GameMode::Solo && playerIndex == maxPlayer)
+		ui->AddStartButton();
+	else if (game.gameMode == GameMode::Versus && playerIndex > 1)
+		ui->AddStartButton();
 }
 
 void		SetPlayerControllerData()
@@ -230,6 +251,8 @@ void		ResetPlayerController()
 	playerIndex = 0;
 	for (int i = 0; i < 3; i++)
 		playerAlreadyInit[i] = false;
+	for (int i = 0; i < 9; i++)
+		ControllerAlreadyInit[i] = false;
 	playerList.clear();
 }
 
@@ -309,7 +332,7 @@ int			main()
 				ui.screen = Screen::PauseMenu;
 				ui.InitMenu();
 			}
-			if (event.type == Event::KeyPressed)
+			if (event.type == Event::KeyPressed || Event::JoystickButtonPressed)
 			{
 				switch (gameState)
 				{
@@ -325,7 +348,7 @@ int			main()
 					}
 					break;
 				case Pause:
-					if (event.key.code == Keyboard::Space)
+					if (event.key.code == Keyboard::Space || )
 					{
 						isPause = true;
 						gameState = GameState::InGame;
@@ -352,8 +375,10 @@ int			main()
 			gameState = GameState::Menu;
 			break;
 		case Menu:
-			if (ui.screen == Screen::MultiPlayerMenu)
-				PlayerControllerInit(&ui);
+			if (ui.screen == Screen::SinglePlayerMenu)
+				PlayerControllerInit(&ui, 1);
+			else if (ui.screen == Screen::MultiPlayerMenu)
+				PlayerControllerInit(&ui, 4);
 			ui.Draw(window);
 			break;
 		case Loading:

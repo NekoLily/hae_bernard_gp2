@@ -12,7 +12,7 @@ enum InGameState
 
 enum Screen
 {
-	MainMenu, SinglePlayerMenu, MultiPlayerMenu,  PauseMenu, WinMenu, LooseMenu, StartButton, DrawMenu, Reload, Null,
+	MainMenu, SinglePlayerMenu, MultiPlayerMenu,  PauseMenu, WinMenu, LooseMenu, StartButton, DrawMenu, Reload, Leave,
 };
 
 enum MoveDirection

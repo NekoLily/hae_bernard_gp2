@@ -31,11 +31,13 @@ public:
 	Screen		state;
 	Text			text;
 
-	Button(float _buttonWidth, float _characterSize, String  _text, Vector2f _pos, Color _textcolor, Font* _font, Color _buttoncolor, Screen _state)
+	Button(float _buttonWidth, float _characterSize, String  _text, Vector2f _pos, Color _textcolor, Font* _font, Screen _state, Color _buttoncolor = Color::Transparent)
 	{
 		shapeButton.setSize(Vector2f(_buttonWidth, _characterSize));
 		shapeButton.setPosition(_pos);
 		shapeButton.setFillColor(_buttoncolor);
+		shapeButton.setOutlineColor(Color::Black);
+		shapeButton.setOutlineThickness(2);
 		shapeButton.setOrigin(Vector2f(_buttonWidth / 2, _characterSize / 2));
 
 		text.setCharacterSize(_characterSize);
@@ -84,21 +86,18 @@ public:
 		CustomText* text = nullptr;
 		if (screen == Screen::MainMenu)
 		{
-			Button singlePlayerButton = Button(470, 70, String("Single Player"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y / 3), Color::Black, font, Color::Green, Screen::SinglePlayerMenu);
+			Button singlePlayerButton = Button(470, 70, String("Single Player"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y / 3), Color::Black, font,  Screen::SinglePlayerMenu);
 			buttonList.push_back(singlePlayerButton);
-			Button MultiPlayerButton = Button(470, 70, String("Versus"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y / 2), Color::Black, font, Color::Green, Screen::MultiPlayerMenu);
+			Button MultiPlayerButton = Button(470, 70, String("Versus"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y / 2), Color::Black, font, Screen::MultiPlayerMenu);
 			buttonList.push_back(MultiPlayerButton);
-		}
-		else if (screen == Screen::MultiPlayerMenu)
-		{
-			Button MultiPlayerButton = Button(470, 70, String("Start !"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y - 100), Color::Black, font, Color::Green, Screen::StartButton);
-			buttonList.push_back(MultiPlayerButton);
-		}
-		else
-		{
-			Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, Screen::MainMenu);
+			Button quitButton = Button(470, 70, String("Quit"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y - screenSize.y / 10), Color::Black, font, Screen::Leave);
 			buttonList.push_back(quitButton);
-			Button retryButton(70, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Color::Green, Screen::Reload);
+		}
+		else if (screen != Screen::SinglePlayerMenu && screen != Screen::MultiPlayerMenu)
+		{
+			Button quitButton(70, 30, String("Quit"), Vector2f(screenSize.x / 2 - screenSize.x / 5, screenSize.y / 1.5), Color::Black, font, Screen::MainMenu);
+			buttonList.push_back(quitButton);
+			Button retryButton(90, 30, String("Retry"), Vector2f(screenSize.x / 2 + screenSize.x / 5, screenSize.y / 1.5), Color::Black, font,  Screen::Reload);
 			buttonList.push_back(retryButton);
 		}
 		switch (screen)
@@ -106,16 +105,28 @@ public:
 		case MainMenu:
 			text = new  CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("World of tank low cost"));
 			textList.push_back(text);
+
 			break;
 		case SinglePlayerMenu:
+		{
+			text = new  CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("Solo Menu"));
+			textList.push_back(text);
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2, screenSize.y - screenSize.y / 10), Color::Black, String("Press A or space to join"));
+			textList.push_back(text);
+			Button quitButton(70, 30, String("Back"), Vector2f(screenSize.x / 10, screenSize.y - screenSize.y / 10), Color::Black, font, Screen::MainMenu);
+			buttonList.push_back(quitButton);
+		}
 			break;
 		case MultiPlayerMenu:
 		{
 			text = new  CustomText(100, font, Vector2f(screenSize.x / 2, screenSize.y / 10), Color::Black, String("Versus Menu"));
 			textList.push_back(text);
 			
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2, screenSize.y - screenSize.y / 10), Color::Black, String("Press start or space to join"));
+			text = new CustomText(50, font, Vector2f(screenSize.x / 2, screenSize.y - screenSize.y / 10), Color::Black, String("Press A or space to join"));
+
 			textList.push_back(text);
+			Button quitButton(70, 30, String("Back"), Vector2f(screenSize.x / 10, screenSize.y - screenSize.y / 10), Color::Black, font, Screen::MainMenu);
+			buttonList.push_back(quitButton);
 		}
 		break;
 		case PauseMenu:
@@ -140,14 +151,12 @@ public:
 			break;
 		case Reload:
 			break;
-		case Null:
-			break;
 		default:
 			break;
 		}
 	}
 
-	void		AddControllerIcon(Texture* iconTexture, int indexPlayer, int id = -1)
+	void		AddControllerIcon(Texture* iconTexture, int indexPlayer, GameMode & gameMode, int id = -1)
 	{
 		Sprite* spr = new Sprite();
 		Sprite* sprHull = new Sprite();
@@ -157,21 +166,43 @@ public:
 		switch (indexPlayer)
 		{
 		case 0:
-			spr->setScale(0.25, 0.25);
-			spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4 + screenSize.y / 10));
-			spr->setTexture(*iconTexture);
-			spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+			if (gameMode == GameMode::Solo)
+			{
+				text = new CustomText(50, font, Vector2f(screenSize.x / 2, screenSize.y / 4), Color::Black, String("Player"));
+				spr->setScale(0.25, 0.25);
+				spr->setPosition(Vector2f(screenSize.x / 2, screenSize.y / 4 + screenSize.y / 10));
+				spr->setTexture(*iconTexture);
+				spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
 
-			sprHull->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
-			sprHull->setTexture(*tankTextureList[0]);
-			sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
 
-			sprGun->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
-			sprGun->setTexture(*tankTextureList[1]);
-			sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+				sprHull->setPosition(Vector2f(screenSize.x / 2, screenSize.y / 2 + screenSize.y / 10));
+				sprHull->setTexture(*tankTextureList[0]);
+				sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
 
-			text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 1"));
-			textList.push_back(text);
+				sprGun->setPosition(Vector2f(screenSize.x / 2, screenSize.y / 2 + screenSize.y / 10));
+				sprGun->setTexture(*tankTextureList[1]);
+				sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+				textList.push_back(text);
+			}
+			else if (gameMode == GameMode::Versus)
+			{
+				spr->setScale(0.25, 0.25);
+				spr->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4 + screenSize.y / 10));
+				spr->setTexture(*iconTexture);
+				spr->setOrigin(Vector2f(spr->getTexture()->getSize().x / 2, spr->getTexture()->getSize().y / 2));
+
+				sprHull->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+				sprHull->setTexture(*tankTextureList[0]);
+				sprHull->setOrigin(Vector2f(sprHull->getTexture()->getSize().x / 2, sprHull->getTexture()->getSize().y / 2));
+
+				sprGun->setPosition(Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 2 + screenSize.y / 10));
+				sprGun->setTexture(*tankTextureList[1]);
+				sprGun->setOrigin(Vector2f(sprGun->getTexture()->getSize().x / 2, sprGun->getTexture()->getSize().y / 2));
+
+				text = new CustomText(50, font, Vector2f(screenSize.x / 2 - screenSize.x / 3, screenSize.y / 4), Color::Black, String("Player 1"));
+				textList.push_back(text);
+			}
 			break;
 		case 1:
 			spr->setScale(0.25, 0.25);
@@ -262,21 +293,21 @@ public:
 					game.ResetData();
 					break;
 				case SinglePlayerMenu:
+					InitMenu();
 					game.gameMode = GameMode::Solo;
-					gameState = GameState::Loading;
 					break;
 				case MultiPlayerMenu:
 					InitMenu();
+					game.gameMode = GameMode::Versus;
 					break;
 				case StartButton:
-					game.gameMode = GameMode::Versus;
 					gameState = GameState::Loading;
 				case Reload:
 					game.ResetData();
 					gameState = GameState::Loading;
 					break;
-				case Null:
-					break;
+				case Leave:
+					exit(0);
 				default:
 					break;
 				}
@@ -293,6 +324,12 @@ public:
 		textList.clear();
 		buttonList.clear();
 		spriteList.clear();
+	}
+
+	void		AddStartButton()
+	{
+		Button MultiPlayerButton = Button(545, 70, String("Start !"), Vector2f(screenSize.x - screenSize.x / 2, screenSize.y - 100), Color::Black, font,  Screen::StartButton, Color::White);
+		buttonList.push_back(MultiPlayerButton);
 	}
 
 private:

@@ -46,7 +46,7 @@ public:
 
 		float RightAxeX = sf::Joystick::getAxisPosition(indexController, sf::Joystick::U);
 		float RightAxeY = sf::Joystick::getAxisPosition(indexController, sf::Joystick::V);
-		printf("X = %f | Y = %f\n", RightAxeX, RightAxeY);
+		//printf("X = %f | Y = %f\n", RightAxeX, RightAxeY);
 
 
 		float AxeTrigger = sf::Joystick::getAxisPosition(indexController, sf::Joystick::Z);
@@ -59,9 +59,9 @@ public:
 			MoveX = -1;
 		else if (LeftAxeX >= 30)
 			MoveX = 1;
-		if (LeftAxeY <= -30)
+		if (LeftAxeY <= -25)
 			MoveY = -1;
-		else if (LeftAxeY >= 30)
+		else if (LeftAxeY >= 25)
 			MoveY = 1;
 
 		if (MoveY == -1)
@@ -91,7 +91,9 @@ public:
 		if (Keyboard::isKeyPressed(Keyboard::Right))tank->MoveTank(MoveDirection::RotateRight);
 		if (Keyboard::isKeyPressed(Keyboard::Left))tank->MoveTank(MoveDirection::RotateLeft);
 		if (Keyboard::isKeyPressed(Keyboard::Up))tank->MoveTank(MoveDirection::Up);
-		if (Keyboard::isKeyPressed(Keyboard::Down))tank->MoveTank(MoveDirection::Down);
+		else if (Keyboard::isKeyPressed(Keyboard::Down))tank->MoveTank(MoveDirection::Down);
+		else
+			tank->MoveTank(MoveDirection::Idle);
 		if (Mouse::isButtonPressed(Mouse::Left)&& tank->tankState == TankState::TankAlive)game->AddShell(*tank, *mouseWorldPos, time);
 	}
 

@@ -13,7 +13,7 @@ using namespace std;
 class	Shell
 {
 private:
-	float					offSetSpawnPos = 50;
+	float					offSetSpawnPos = 30;
 	int						currentExplosion = 0;
 	float					lastExplosionTime = 0;
 	float					xDirection = 0;
@@ -38,7 +38,8 @@ public:
 		shell.setPosition(owner->GetTransformPosition());
 		SetDirection(_targetDirection);
 		explosionTexture = _explosionTexture;
-		soundBufferVec = _soundBufferVec;
+		soundBufferVec = _soundBufferVec;	
+		
 	}
 
 	void	SetDirection(Vector2f _pos)
@@ -61,7 +62,12 @@ public:
 		if (shell.getGlobalBounds().intersects(tank.GetTankGlobalBounds()))
 		{
 			if (&tank == owner && shellState == ShellState::Shellinit)
+			{
+				shellSound.setBuffer(*soundBufferVec[3]);
+				shellSound.play();
+				printf("hit\n");
 				return false;
+			}
 			if (tank.tankState == TankState::TankAlive)
 			{
 				tank.tankState = TankState::TankExplode;

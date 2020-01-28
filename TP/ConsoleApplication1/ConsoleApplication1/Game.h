@@ -49,7 +49,7 @@ public:
 			win.draw(flash.flash);
 	}
 
-	void		AddTank(const char* _name, TankTag _tankTag, Vector2f _position, Shader* _shader)
+	void		AddTank(const char* _name, TankTag _tankTag, Vector2f _position,  float _startRotation)
 	{
 		Texture* hull = nullptr;
 		Texture* gun = nullptr;
@@ -69,7 +69,7 @@ public:
 		default:
 			break;
 		}
-		tankList.push_back(Tank(_name, _tankTag, _position, _shader, hull, gun, explosionTexture, soundBufferVec));
+		tankList.push_back(Tank(_name, _tankTag, _position, hull, gun, _startRotation, explosionTexture, soundBufferVec));
 	}
 
 	void		AddWall(const char* _name, Vector2f _position, Vector2f _size)
@@ -79,7 +79,7 @@ public:
 
 	void		AddShell(Tank& _tank, Vector2f _targetDirection, float _time)
 	{
-		if (_tank.currentShell < _tank.maxShell && ((_time - _tank.lastShootingTime) > 0.1f || _tank.lastShootingTime == 0))
+		if (_tank.currentShell < _tank.maxShell && ((_time - _tank.lastShootingTime) > 0.2f || _tank.lastShootingTime == 0))
 		{
 			_tank.lastShootingTime = _time;
 			_tank.currentShell++;
